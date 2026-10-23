@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
 
-    <!-- A proposal, opened from the statement's Proposals tab as a dialog. -->
+    <!-- A proposal, opened from the statement's Proposals tab as a dialog (action_open). -->
     <record id="view_bank_txn_proposal_form" model="ir.ui.view">
         <field name="name">account.bank.txn.proposal.form</field>
         <field name="model">account.bank.txn.proposal</field>
@@ -26,8 +26,7 @@
                     </div>
                     <group>
                         <group>
-                            <!-- close_dialog: the template opens full page, so this dialog closes (static/src/js). -->
-                            <field name="template_id" readonly="1" options="{'close_dialog': True}"/>
+                            <field name="template_id" readonly="1"/>
                             <field name="kind" readonly="1"/>
                             <field name="partner_id" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': [('state', '=', 'approved')]}"/>
                             <field name="date" readonly="1"/>
@@ -65,6 +64,11 @@
                         </tree>
                     </field>
                 </sheet>
+                <footer>
+                    <button name="action_save" string="Save" type="object" class="btn-primary"
+                            attrs="{'invisible': [('state', '=', 'approved')]}"/>
+                    <button string="Close" special="cancel"/>
+                </footer>
             </form>
         </field>
     </record>
@@ -89,7 +93,8 @@
                                     confirm="Approve every ready proposal? This creates the orders, invoices and entries and reconciles the bank lines."/>
                         </div>
                     </div>
-                    <field name="txn_proposal_ids" readonly="1" context="{'form_view_ref': 'account_bank_statement_template.view_bank_txn_proposal_form'}">
+                    <!-- Rows open the proposal in an editable dialog; buttons and closing it reload the statement (static/src/js). -->
+                    <field name="txn_proposal_ids" readonly="1" options="{'open_action': 'action_open', 'reload_on_button': True}">
                         <tree decoration-danger="state == 'failed' or block_reason" decoration-muted="state == 'approved'">
                             <field name="template_id"/>
                             <field name="partner_id"/>

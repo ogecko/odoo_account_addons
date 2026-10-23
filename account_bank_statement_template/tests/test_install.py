@@ -60,13 +60,18 @@ class TestScreenLayout(TransactionCase):
         selection = self.env['account.bank.txn.proposal']._fields['state'].selection
         self.assertEqual([s for s, _ in selection], ['open', 'failed', 'approved'])
 
-    def test_proposal_form_template_link_closes_dialog(self):
+    def test_proposal_form_editable_in_dialog(self):
         arch = etree.fromstring(self.env['account.bank.txn.proposal'].fields_view_get(
             view_id=self.env.ref('account_bank_statement_template.view_bank_txn_proposal_form').id,
             view_type='form')['arch'])
-        field = arch.xpath('//field[@name="template_id"]')[0]
-        self.assertIn('close_dialog', field.get('options'))
         self.assertTrue(arch.xpath('//field[@name="invoice_date"]'))
+        self.assertTrue(arch.xpath('//footer/button[@name="action_save"]'))
+
+    def test_proposals_open_editable_and_reload_statement(self):
+        arch = etree.fromstring(self.env['account.bank.statement'].fields_view_get(view_type='form')['arch'])
+        options = arch.xpath('//field[@name="txn_proposal_ids"]')[0].get('options')
+        self.assertIn("'open_action': 'action_open'", options)
+        self.assertIn("'reload_on_button': True", options)
 
     def test_template_form_lists_description_placeholders(self):
         arch = self.env['account.bank.txn.template'].fields_view_get(view_type='form')['arch']

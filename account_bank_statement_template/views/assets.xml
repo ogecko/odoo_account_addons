@@ -2,7 +2,7 @@
 <odoo>
     <template id="assets_backend" name="bank statement template assets" inherit_id="web.assets_backend">
         <xpath expr="." position="inside">
-            <script type="text/javascript" src="/account_bank_statement_template/static/src/js/close_dialog.js"/>
+            <script type="text/javascript" src="/account_bank_statement_template/static/src/js/proposal_dialog.js"/>
         </xpath>
     </template>
 </odoo>

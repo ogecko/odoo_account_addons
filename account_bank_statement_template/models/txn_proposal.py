@@ -231,12 +231,31 @@ class BankTxnProposalEditing(models.Model):
 
     @api.multi
     def action_discard(self):
-        """Drop open or failed proposals; their bank lines can be matched again.
-        Reloads the page: closes the proposal dialog and refreshes the statement."""
+        """Drop open or failed proposals; their bank lines can be matched again."""
         if self.filtered(lambda p: p.state == 'approved'):
             raise UserError(_("An approved proposal can't be discarded."))
         self.unlink()
-        return {'type': 'ir.actions.client', 'tag': 'reload'}
+        return {'type': 'ir.actions.act_window_close'}
+
+    @api.multi
+    def action_open(self):
+        """The proposal in an editable dialog (rows of the statement's Proposals
+        tab open this, see static/src/js). Closing it reloads the statement."""
+        self.ensure_one()
+        return {
+            'type': 'ir.actions.act_window',
+            'name': _('Proposal'),
+            'res_model': self._name,
+            'res_id': self.id,
+            'view_mode': 'form',
+            'views': [(self.env.ref('account_bank_statement_template.view_bank_txn_proposal_form').id, 'form')],
+            'target': 'new',
+        }
+
+    @api.multi
+    def action_save(self):
+        """The dialog's Save: the form saves before calling this."""
+        return {'type': 'ir.actions.act_window_close'}
 
 
 class BankTxnProposalLineEditing(models.Model):

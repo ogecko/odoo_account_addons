@@ -162,8 +162,18 @@ class TestProposalEditing(TxnCase):
         self.assertFalse(new.edited)
         self.assertEqual(len(new.statement_line_ids), 2)
 
-    def test_discard_closes_and_reloads(self):
-        self.assertEqual(self.p.action_discard(), {'type': 'ir.actions.client', 'tag': 'reload'})
+    def test_discard_closes_dialog(self):
+        self.assertEqual(self.p.action_discard(), {'type': 'ir.actions.act_window_close'})
+
+    def test_open_in_editable_dialog(self):
+        action = self.p.action_open()
+        self.assertEqual((action['res_model'], action['res_id'], action['target']),
+                         ('account.bank.txn.proposal', self.p.id, 'new'))
+        self.assertEqual(action['views'], [(self.env.ref(
+            'account_bank_statement_template.view_bank_txn_proposal_form').id, 'form')])
+
+    def test_save_closes_dialog(self):
+        self.assertEqual(self.p.action_save(), {'type': 'ir.actions.act_window_close'})
 
     def test_invoice_date_defaults_to_last_bank_line(self):
         self.assertEqual(self.p.invoice_date, self.p.date)
