@@ -65,6 +65,13 @@ class BankTxnProposalApprove(models.Model):
             }) for line in self.line_ids],
         })
         order.action_confirm()
+        # Services invoiced on delivered quantities and tracked by hand: the bank
+        # payments are for services already delivered, so state them delivered.
+        for line in order.order_line:
+            product = line.product_id
+            if product.type == 'service' and product.invoice_policy == 'delivery' \
+                    and line.qty_delivered < line.product_uom_qty:
+                line.qty_delivered = line.product_uom_qty
         invoice = self.env['account.invoice'].browse(order.action_invoice_create())
         return self._validate_and_reconcile(invoice, order=order)
 

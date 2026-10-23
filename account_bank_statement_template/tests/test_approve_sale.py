@@ -67,3 +67,19 @@ class TestApproveSale(TxnCase):
             p.action_approve()
         self.assertFalse(self.env['sale.order'].search([('txn_proposal_id', '=', p.id)]))
         self.assertEqual(p.state, 'open')
+
+
+class TestApproveSaleDeliveredService(TestApproveSale):
+    """A service invoiced on delivered quantities, tracked by hand (as the
+    real weekly-services product is): approval states the services delivered."""
+
+    def setUp(self):
+        super(TestApproveSaleDeliveredService, self).setUp()
+        self.service.product_tmpl_id.write({'invoice_policy': 'delivery', 'track_service': 'manual'})
+
+    def test_services_marked_delivered_and_invoiced(self):
+        st, p = self.approved()
+        self.assertEqual(p.state, 'approved', p.fail_reason)
+        for line in p.sale_order_id.order_line:
+            self.assertEqual(line.qty_delivered, line.product_uom_qty)
+        self.assertEqual(p.invoice_id.state, 'paid')

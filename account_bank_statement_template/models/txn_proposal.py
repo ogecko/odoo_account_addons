@@ -70,8 +70,9 @@ class BankTxnProposal(models.Model):
                  'statement_line_ids.journal_entry_ids', 'statement_line_ids.date')
     def _compute_block_reason(self):
         for p in self:
-            p.block_reason = p._get_block_reason() if p.state == 'open' else False
-            if p.state != 'open':
+            state = p.state or 'open'  # unsaved proposals have no state yet
+            p.block_reason = p._get_block_reason() if state == 'open' and p.statement_id else False
+            if state != 'open':
                 p.status_label = dict(self._fields['state'].selection)[p.state]
             elif p.block_reason:
                 p.status_label = 'Blocked'

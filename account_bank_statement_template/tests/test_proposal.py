@@ -186,3 +186,12 @@ class TestRemoveFromSaleGroup(TxnCase):
     def _weekly_statement(self):
         return self.make_statement([(D(2026, 7, 2) + timedelta(weeks=i), 44.00, 'Transfer from J CITIZEN')
                                     for i in range(3)])
+
+
+class TestProposalDraft(TxnCase):
+
+    def test_status_of_unsaved_proposal(self):
+        # The web client computes fields on an empty proposal (e.g. after Discard).
+        draft = self.env['account.bank.txn.proposal'].new({})
+        self.assertEqual(draft.status_label, 'Ready')
+        self.assertFalse(draft.block_reason)
