@@ -22,6 +22,9 @@
         'sale',
         'purchase',
     ],
-    'data': [],
+    'data': [
+        'security/ir.model.access.csv',
+        'views/txn_template_views.xml',
+    ],
     'installable': True,
 }
