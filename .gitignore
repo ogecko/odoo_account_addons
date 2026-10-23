@@ -3,6 +3,7 @@ data/
 docs/superpowers/
 tmp/
 .superpowers/
+.private-terms
 *:Zone.Identifier
 
 # Python
