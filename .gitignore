@@ -1,0 +1,19 @@
+# Private business data: never commit
+data/
+docs/superpowers/
+tmp/
+.superpowers/
+*:Zone.Identifier
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+.venv/
+.pytest_cache/
+*.egg-info/
+
+# Editors
+*~
+.vscode/
+.idea/
