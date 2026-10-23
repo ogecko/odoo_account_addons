@@ -176,7 +176,7 @@ def test_fee_unpaired_when_charge_three_days_away():
 
 from datetime import timedelta
 
-from matching import ex_tax_unit, group_by_amount, quarter_of, render_description, same_quarter
+from matching import ex_tax_unit, group_by_amount, period_end, quarter_of, render_description, same_quarter, split_amount
 
 
 def test_group_by_amount_mixed_prices():
@@ -226,3 +226,33 @@ def test_render_date_is_last_line_of_group():
 
 def test_render_unknown_placeholder_kept():
     assert render_description('{foo} x', [date(2026, 7, 3)], date(2026, 7, 3)) == '{foo} x'
+
+
+BAS = 'TAX OFFICE PAYMENTS NetBank BPAY 75556 1111222233334444 GST 12 PAYG 300'
+
+
+def test_split_amount_after_keyword():
+    assert split_amount(BAS, 'GST') == 12.0
+    assert split_amount(BAS, 'payg') == 300.0
+
+
+def test_split_amount_without_space_or_with_cents():
+    assert split_amount('BPAY 75556 1111222233334444 GST37', 'GST') == 37.0
+    assert split_amount('GST 12.50 PAYG 3', 'GST') == 12.5
+
+
+def test_split_amount_missing_or_inside_a_word():
+    assert split_amount('BPAY 75556 1111222233334444 GST37', 'PAYG') is None
+    assert split_amount('XGST 5', 'GST') is None
+
+
+def test_period_end_is_previous_quarter_end():
+    assert period_end(date(2026, 1, 5)) == date(2025, 12, 31)
+    assert period_end(date(2025, 7, 26)) == date(2025, 6, 30)
+    assert period_end(date(2026, 4, 28)) == date(2026, 3, 31)
+    assert period_end(date(2026, 10, 1)) == date(2026, 9, 30)
+
+
+def test_render_period_end():
+    assert render_description('GST period ending {period_end}', [date(2026, 1, 5)], date(2026, 1, 5)) \
+        == 'GST period ending 31 Dec 2025'

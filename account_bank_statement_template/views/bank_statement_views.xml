@@ -28,9 +28,9 @@
                         <group>
                             <field name="template_id" readonly="1"/>
                             <field name="kind" readonly="1"/>
-                            <field name="partner_id" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': [('state', '=', 'approved')]}"/>
+                            <field name="partner_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])], 'readonly': [('state', '=', 'approved')]}"/>
                             <field name="date" readonly="1"/>
-                            <field name="invoice_date" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': ['|', ('state', '=', 'approved'), ('kind', '!=', 'sale_order')], 'required': [('kind', '=', 'sale_order')]}"/>
+                            <field name="invoice_date" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])], 'readonly': ['|', ('state', '=', 'approved'), ('kind', '!=', 'sale_order')], 'required': [('kind', '=', 'sale_order')]}"/>
                         </group>
                         <group>
                             <field name="amount_total"/>

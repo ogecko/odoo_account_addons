@@ -40,11 +40,11 @@
                             <field name="active"/>
                         </group>
                         <group string="Creates">
-                            <field name="partner_id" attrs="{'invisible': [('kind', '=', 'direct')]}"/>
-                            <field name="product_id" attrs="{'invisible': [('kind', '=', 'direct')]}"/>
+                            <field name="partner_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
+                            <field name="product_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
                             <field name="account_id" attrs="{'invisible': [('kind', '!=', 'direct')]}"/>
-                            <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', '=', 'direct')]}"/>
-                            <field name="description"/>
+                            <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
+                            <field name="description" attrs="{'invisible': [('kind', '=', 'split')]}"/>
                             <div colspan="2" class="text-muted">
                                 Keywords:
                                 <code>{year}</code>
@@ -52,11 +52,25 @@
                                 <code>{last_week}</code>
                                 <code>{quarter}</code>
                                 <code>{date}</code>
+                                <code>{period_end}</code>
                                 Example: <code>Services {year} (Wk{first_week} to Wk{last_week})</code>
                             </div>
                         </group>
                     </group>
-                    <group string="Fee" attrs="{'invisible': [('kind', '=', 'direct')]}">
+                    <separator string="Split" attrs="{'invisible': [('kind', '!=', 'split')]}"/>
+                    <div class="text-muted" attrs="{'invisible': [('kind', '!=', 'split')]}">
+                        Each line's amount is the number after its keyword in the bank description
+                        (e.g. <code>GST 12 PAYG 300</code>); 0 if it isn't there. Lines left at 0 aren't posted.
+                    </div>
+                    <field name="split_ids" attrs="{'invisible': [('kind', '!=', 'split')]}">
+                        <tree editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="keyword"/>
+                            <field name="account_id"/>
+                            <field name="description"/>
+                        </tree>
+                    </field>
+                    <group string="Fee" attrs="{'invisible': [('kind', 'not in', ['sale_order', 'purchase_order'])]}">
                         <group>
                             <field name="companion_text"/>
                             <field name="companion_is_regex"/>

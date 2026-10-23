@@ -4,7 +4,7 @@ from odoo.exceptions import UserError
 from odoo.tools import float_compare
 
 from ..lib import matching
-from .txn_template import KINDS
+from .txn_template import KINDS, ORDER_KINDS
 
 
 class BankTxnProposal(models.Model):
@@ -64,7 +64,7 @@ class BankTxnProposal(models.Model):
                  for d in self.statement_line_ids.mapped('date') + [self.date]]
         if not matching.same_quarter(dates):
             return 'bank lines span two quarters'
-        if self.kind != 'direct':
+        if self.kind in ORDER_KINDS:
             if not self.invoice_date:
                 return 'no invoice date'
             if not matching.same_quarter(dates + [fields.Date.from_string(self.invoice_date)]):
@@ -143,7 +143,7 @@ class BankTxnProposalBuilder(models.Model):
     @api.model
     def _build(self, statement, template, lines, fee_lines=None, fee_of=None):
         """Create the proposal for one template's matched bank lines (one line
-        for direct templates). fee_of maps fee line id -> charge line id."""
+        for direct and split templates). fee_of maps fee line id -> charge line id."""
         fee_lines = fee_lines or self.env['account.bank.statement.line']
         fee_of = fee_of or {}
         all_lines = lines | fee_lines
@@ -161,6 +161,12 @@ class BankTxnProposalBuilder(models.Model):
             vals.append({'name': describe(template.description, lines.name, lines),
                          'account_id': template.account_id.id, 'quantity': 1,
                          'price_unit': abs(lines.amount), 'statement_line_ids': [(6, 0, lines.ids)]})
+        elif template.kind == 'split':
+            for part in template.split_ids:
+                vals.append({'name': describe(part.description, part.keyword, lines),
+                             'account_id': part.account_id.id, 'quantity': 1,
+                             'price_unit': matching.split_amount(lines.name, part.keyword) or 0.0,
+                             'statement_line_ids': [(6, 0, lines.ids)]})
         elif template.kind == 'sale_order':
             for amount, group in matching.group_by_amount([l._to_match_dict() for l in lines]):
                 group_lines = self.env['account.bank.statement.line'].browse([g['id'] for g in group])
@@ -207,7 +213,7 @@ class BankTxnProposalEditing(models.Model):
     @api.model
     def create(self, vals):
         # Orders are invoiced on the last bank line's date unless told otherwise.
-        if vals.get('kind') != 'direct' and not vals.get('invoice_date'):
+        if vals.get('kind') in ORDER_KINDS and not vals.get('invoice_date'):
             vals = dict(vals, invoice_date=vals.get('date'))
         # Lines created together with their proposal are part of building it.
         return super(BankTxnProposalEditing, self.with_context(txn_builder=True)).create(vals)

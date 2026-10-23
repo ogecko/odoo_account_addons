@@ -6,7 +6,7 @@ import pytz
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
-from odoo.tools import float_compare, ustr
+from odoo.tools import float_compare, float_is_zero, ustr
 
 from ..lib import matching
 
@@ -51,6 +51,10 @@ class BankTxnProposalApprove(models.Model):
         return fields.Datetime.to_string(local.astimezone(pytz.utc))
 
     def _approve_direct(self):
+        """One entry per bank line, a line per proposal line; zero lines (a split
+        part with no amount) are left out."""
+        lines = self.line_ids.filtered(
+            lambda l: not float_is_zero(l.price_total, precision_rounding=self.currency_id.rounding))
         moves = self.env['account.move']
         for st_line in self.statement_line_ids:
             money_in = st_line.amount > 0
@@ -59,8 +63,10 @@ class BankTxnProposalApprove(models.Model):
                 'account_id': line.account_id.id,
                 'debit': 0.0 if money_in else line.price_total,
                 'credit': line.price_total if money_in else 0.0,
-            } for line in self.line_ids])
+            } for line in lines])
         return {'moves': moves}
+
+    _approve_split = _approve_direct
 
     def _approve_sale_order(self):
         when = self._datetime(self.invoice_date)

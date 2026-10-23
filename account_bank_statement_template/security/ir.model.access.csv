@@ -2,3 +2,4 @@ id,name,model_id:id,group_id:id,perm_read,perm_write,perm_create,perm_unlink
 access_bank_txn_template_manager,bank txn template manager,model_account_bank_txn_template,account.group_account_manager,1,1,1,1
 access_bank_txn_proposal_manager,bank txn proposal manager,model_account_bank_txn_proposal,account.group_account_manager,1,1,1,1
 access_bank_txn_proposal_line_manager,bank txn proposal line manager,model_account_bank_txn_proposal_line,account.group_account_manager,1,1,1,1
+access_bank_txn_template_split_manager,bank txn template split manager,model_account_bank_txn_template_split,account.group_account_manager,1,1,1,1

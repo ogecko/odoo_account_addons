@@ -4,6 +4,7 @@ import logging
 from odoo import api, fields, models
 
 from ..lib import matching
+from .txn_template import ENTRY_KINDS
 
 _logger = logging.getLogger(__name__)
 
@@ -113,7 +114,7 @@ class AccountBankStatement(models.Model):
                 continue
             lines = Line.browse(line_ids)
             fees = dict(result['companions'].get(template.id, []))  # fee id -> charge id
-            if template.kind == 'direct':
+            if template.kind in ENTRY_KINDS:
                 for line in lines:
                     builder._build(self, template, line)
             else:
