@@ -5,3 +5,4 @@ from . import test_proposal
 from . import test_match
 from . import test_approve_direct
 from . import test_approve_sale
+from . import test_approve_purchase

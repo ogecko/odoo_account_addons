@@ -68,6 +68,36 @@ class BankTxnProposalApprove(models.Model):
         invoice = self.env['account.invoice'].browse(order.action_invoice_create())
         return self._validate_and_reconcile(invoice, order=order)
 
+    def _approve_purchase_order(self):
+        order = self.env['purchase.order'].create({
+            'partner_id': self.partner_id.id,
+            'date_order': self.date,
+            'txn_proposal_id': self.id,
+            'order_line': [(0, 0, {
+                'name': line.name,
+                'product_id': line.product_id.id,
+                'product_qty': line.quantity,
+                'product_uom': line.product_id.uom_po_id.id,
+                'price_unit': line.price_unit,
+                'taxes_id': [(6, 0, line.tax_ids.ids)],
+                'date_planned': self.date,
+            }) for line in self.line_ids],
+        })
+        order.button_confirm()
+        for picking in order.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel')):
+            picking.force_assign()
+            self.env['stock.immediate.transfer'].create({'pick_id': picking.id}).process()
+        # The vendor bill, built the way the "Add Purchase Order" field on a bill does it.
+        Invoice = self.env['account.invoice']
+        bill = Invoice.new({'type': 'in_invoice', 'partner_id': self.partner_id.id,
+                            'date_invoice': self.date})
+        bill._onchange_partner_id()
+        bill.purchase_id = order
+        bill.purchase_order_change()
+        invoice = Invoice.create(bill._convert_to_write(bill._cache))
+        invoice.compute_taxes()
+        return self._validate_and_reconcile(invoice, order=order)
+
     def _validate_and_reconcile(self, invoice, order):
         """Date the invoice on the proposal date (Odoo would use today), validate
         it, and reconcile every bank line against its receivable/payable line."""
