@@ -94,8 +94,10 @@ class BankTxnProposalApprove(models.Model):
         for picking in order.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel')):
             picking.force_assign()
             self.env['stock.immediate.transfer'].create({'pick_id': picking.id}).process()
-        # The vendor bill, built the way the "Add Purchase Order" field on a bill does it.
-        Invoice = self.env['account.invoice']
+        # The vendor bill, built the way the "Add Purchase Order" field on a bill
+        # does it. The context is the Vendor Bills menu's, so Odoo defaults to the
+        # purchase journal (and BILL/ numbering), not the sales journal.
+        Invoice = self.env['account.invoice'].with_context(type='in_invoice', journal_type='purchase')
         bill = Invoice.new({'type': 'in_invoice', 'partner_id': self.partner_id.id,
                             'date_invoice': self.date})
         bill._onchange_partner_id()

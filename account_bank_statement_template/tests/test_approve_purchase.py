@@ -76,3 +76,8 @@ class TestApprovePurchase(TxnCase):
         st, p = self.aws()
         self.assertEqual(p.purchase_order_id.txn_proposal_id, p)
         self.assertEqual(p.invoice_id.txn_proposal_id, p)
+
+    def test_bill_in_purchase_journal(self):
+        st, p = self.aws()
+        self.assertEqual(p.invoice_id.journal_id.type, 'purchase')
+        self.assertEqual(p.invoice_id.move_id.journal_id.type, 'purchase')
