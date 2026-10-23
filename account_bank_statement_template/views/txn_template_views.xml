@@ -40,10 +40,10 @@
                             <field name="active"/>
                         </group>
                         <group string="Creates">
-                            <field name="partner_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
-                            <field name="product_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
+                            <field name="partner_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split', 'dividend'])]}"/>
+                            <field name="product_id" attrs="{'invisible': [('kind', 'in', ['direct', 'split', 'dividend'])]}"/>
                             <field name="account_id" attrs="{'invisible': [('kind', '!=', 'direct')]}"/>
-                            <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', 'in', ['direct', 'split'])]}"/>
+                            <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', 'in', ['direct', 'split', 'dividend'])]}"/>
                             <field name="description" attrs="{'invisible': [('kind', '=', 'split')]}"/>
                             <div colspan="2" class="text-muted">
                                 Keywords:
@@ -56,6 +56,23 @@
                                 <code>{prior_period_end}</code>
                                 Example: <code>Services {year} (Wk{first_week} to Wk{last_week})</code>
                             </div>
+                        </group>
+                    </group>
+                    <group string="Dividend" attrs="{'invisible': [('kind', '!=', 'dividend')]}">
+                        <group>
+                            <field name="franked_pct"/>
+                            <field name="company_tax_rate"/>
+                            <div colspan="2" class="text-muted">
+                                Bank amount = franked + unfranked. Franking credit = franked / (1 - tax rate) - franked,
+                                credited to income and debited to the tax credit. The line description is the prefix,
+                                e.g. <code>WDS 100 Div</code>.
+                            </div>
+                        </group>
+                        <group>
+                            <field name="div_franked_account_id" attrs="{'required': [('kind', '=', 'dividend')]}"/>
+                            <field name="div_unfranked_account_id" attrs="{'required': [('kind', '=', 'dividend')]}"/>
+                            <field name="franking_income_account_id" attrs="{'required': [('kind', '=', 'dividend')]}"/>
+                            <field name="franking_credit_account_id" attrs="{'required': [('kind', '=', 'dividend')]}"/>
                         </group>
                     </group>
                     <separator string="Split" attrs="{'invisible': [('kind', '!=', 'split')]}"/>

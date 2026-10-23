@@ -37,6 +37,9 @@ class BankTxnProposal(models.Model):
     warning = fields.Char(compute='_compute_warning')
     status_label = fields.Char(string='Status', compute='_compute_block_reason')
     fail_reason = fields.Text(copy=False)
+    franked_amount = fields.Monetary(help="Franked part of the dividend; the rest is unfranked. "
+                                          "Changing it refills the lines.")
+    franking_tax_rate = fields.Float(string='Company tax rate %', readonly=True)
     sale_order_id = fields.Many2one('sale.order', copy=False, readonly=True)
     purchase_order_id = fields.Many2one('purchase.order', copy=False, readonly=True)
     invoice_id = fields.Many2one('account.invoice', copy=False, readonly=True)
@@ -64,6 +67,9 @@ class BankTxnProposal(models.Model):
                  for d in self.statement_line_ids.mapped('date') + [self.date]]
         if not matching.same_quarter(dates):
             return 'bank lines span two quarters'
+        if self.kind == 'dividend' and float_compare(
+                self.franked_amount, self.bank_total, precision_rounding=self.currency_id.rounding) > 0:
+            return 'franked amount above bank amount'
         if self.kind in ORDER_KINDS:
             if not self.invoice_date:
                 return 'no invoice date'
@@ -74,7 +80,7 @@ class BankTxnProposal(models.Model):
             return u'total %.2f ≠ bank %.2f' % (self.amount_total, self.bank_total)
         return False
 
-    @api.depends('state', 'edited', 'date', 'invoice_date', 'line_ids.price_total',
+    @api.depends('state', 'edited', 'date', 'invoice_date', 'franked_amount', 'line_ids.price_total',
                  'statement_line_ids.journal_entry_ids', 'statement_line_ids.date')
     def _compute_block_reason(self):
         for p in self:
@@ -117,6 +123,10 @@ class BankTxnProposalLine(models.Model):
                                'line_id', 'tax_id', string='Taxes')
     currency_id = fields.Many2one(related='proposal_id.currency_id', readonly=True)
     price_total = fields.Monetary(compute='_compute_price_total', string='Total')
+    role = fields.Selection([('franked', 'Received (franked)'), ('unfranked', 'Received (unfranked)'),
+                             ('fc_income', 'Franking Credit - Income'),
+                             ('fc_credit', 'Franking Credit - Tax Credit')],
+                            help="Which part of a dividend this line is; set from the franked amount.")
     statement_line_ids = fields.Many2many('account.bank.statement.line',
                                           'account_bank_txn_proposal_line_st_line_rel',
                                           'line_id', 'statement_line_id', string='From Statement Lines')
@@ -141,6 +151,26 @@ class BankTxnProposalBuilder(models.Model):
         return matching.ex_tax_unit(amount, sum(excluded.mapped('amount')))
 
     @api.model
+    def _dividend_amounts(self, bank, franked, tax_rate):
+        """Line amounts by role; positive lines go on the side opposite the bank
+        (credits), the franking credit's tax credit on the bank's side (debit)."""
+        credit = matching.franking_credit(franked, tax_rate)
+        return {'franked': franked, 'unfranked': round(bank - franked, 2),
+                'fc_income': credit, 'fc_credit': -credit}
+
+    def _apply_franked_amount(self):
+        """Refill the dividend lines' amounts from the franked amount, keeping
+        their descriptions and accounts."""
+        amounts = self._dividend_amounts(self.bank_total, self.franked_amount, self.franking_tax_rate)
+        for line in self.line_ids.filtered('role'):
+            line.price_unit = amounts[line.role]
+
+    @api.onchange('franked_amount')
+    def _onchange_franked_amount(self):
+        if self.kind == 'dividend':
+            self._apply_franked_amount()
+
+    @api.model
     def _build(self, statement, template, lines, fee_lines=None, fee_of=None):
         """Create the proposal for one template's matched bank lines (one line
         for direct and split templates). fee_of maps fee line id -> charge line id."""
@@ -161,6 +191,18 @@ class BankTxnProposalBuilder(models.Model):
             vals.append({'name': describe(template.description, lines.name, lines),
                          'account_id': template.account_id.id, 'quantity': 1,
                          'price_unit': abs(lines.amount), 'statement_line_ids': [(6, 0, lines.ids)]})
+        elif template.kind == 'dividend':
+            prefix = describe(template.description, template.name, lines)
+            accounts = {'franked': template.div_franked_account_id,
+                        'unfranked': template.div_unfranked_account_id,
+                        'fc_income': template.franking_income_account_id,
+                        'fc_credit': template.franking_credit_account_id}
+            franked = round(abs(lines.amount) * template.franked_pct / 100.0, 2)
+            amounts = self._dividend_amounts(abs(lines.amount), franked, template.company_tax_rate)
+            for role, label in self.env['account.bank.txn.proposal.line']._fields['role'].selection:
+                vals.append({'name': '%s - %s' % (prefix, label), 'role': role,
+                             'account_id': accounts[role].id, 'quantity': 1,
+                             'price_unit': amounts[role], 'statement_line_ids': [(6, 0, lines.ids)]})
         elif template.kind == 'split':
             for part in template.split_ids:
                 vals.append({'name': describe(part.description, part.keyword, lines),
@@ -194,7 +236,10 @@ class BankTxnProposalBuilder(models.Model):
                         'statement_line_ids': [(6, 0, fee.ids)]})
         for seq, v in enumerate(vals):
             v['sequence'] = seq + 1
+        dividend = template.kind == 'dividend'
         return self.create({
+            'franked_amount': dividend and franked or 0.0,
+            'franking_tax_rate': dividend and template.company_tax_rate or 0.0,
             'statement_id': statement.id, 'template_id': template.id, 'kind': template.kind,
             'partner_id': template.partner_id.id, 'date': date,
             'statement_line_ids': [(6, 0, all_lines.ids)],
@@ -204,7 +249,7 @@ class BankTxnProposalBuilder(models.Model):
 
 # Fields the owner edits on a proposal; changing them marks it edited, and they
 # can't change once approved. State and links are written by matching/approval.
-EDITABLE = {'partner_id', 'date', 'invoice_date', 'line_ids'}
+EDITABLE = {'partner_id', 'date', 'invoice_date', 'franked_amount', 'line_ids'}
 
 
 class BankTxnProposalEditing(models.Model):
@@ -224,7 +269,11 @@ class BankTxnProposalEditing(models.Model):
             self._check_editable()
             if not self.env.context.get('txn_builder'):
                 vals = dict(vals, edited=True)
-        return super(BankTxnProposalEditing, self).write(vals)
+        res = super(BankTxnProposalEditing, self).write(vals)
+        if 'franked_amount' in vals:
+            for p in self.filtered(lambda p: p.kind == 'dividend'):
+                p._apply_franked_amount()
+        return res
 
     def _check_editable(self):
         if self.filtered(lambda p: p.state == 'approved'):

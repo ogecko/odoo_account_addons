@@ -176,7 +176,7 @@ def test_fee_unpaired_when_charge_three_days_away():
 
 from datetime import timedelta
 
-from matching import ex_tax_unit, group_by_amount, period_end, prior_period_end, quarter_of, render_description, same_quarter, split_amount
+from matching import ex_tax_unit, franking_credit, group_by_amount, period_end, prior_period_end, quarter_of, render_description, same_quarter, split_amount
 
 
 def test_group_by_amount_mixed_prices():
@@ -263,3 +263,11 @@ def test_render_period_ends():
     # A BAS payment on 28 Apr is for the quarter ending 31 Mar.
     assert render_description('GST {prior_period_end} / {period_end}', [date(2026, 4, 28)],
                               date(2026, 4, 28)) == 'GST 31 Mar 2026 / 30 Jun 2026'
+
+
+def test_franking_credit_at_company_tax_rate():
+    # F / (1 - t) - F, i.e. F * t / (1 - t): 3/7 of the franked amount at 30%.
+    assert franking_credit(70.00, 30.0) == 30.00
+    assert franking_credit(85.00, 30.0) == 36.43
+    assert franking_credit(75.00, 25.0) == 25.00
+    assert franking_credit(0.0, 30.0) == 0.0

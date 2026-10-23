@@ -9,9 +9,10 @@ KINDS = [
     ('sale_order', 'Sales order'),
     ('purchase_order', 'Purchase order'),
     ('split', 'Split to accounts'),
+    ('dividend', 'Dividend'),
 ]
 # Kinds that post straight to accounts (one proposal per bank line), and kinds that make orders.
-ENTRY_KINDS = ('direct', 'split')
+ENTRY_KINDS = ('direct', 'split', 'dividend')
 ORDER_KINDS = ('sale_order', 'purchase_order')
 
 
@@ -48,6 +49,16 @@ class BankTxnTemplate(models.Model):
     description = fields.Char(
         string='Line description',
         help="Placeholders: {year} {first_week} {last_week} {quarter} {date} {period_end} {prior_period_end}")
+    # Dividends: bank amount = franked + unfranked; franking credit on the franked part
+    franked_pct = fields.Float(string='Franked %', default=100.0,
+                               help="Share of a dividend that is franked, to start with; "
+                                    "the proposal's franked amount can be changed.")
+    company_tax_rate = fields.Float(string='Company tax rate %', default=30.0,
+                                    help="The paying company's tax rate, for its franking credits.")
+    div_franked_account_id = fields.Many2one('account.account', string='Received (franked)')
+    div_unfranked_account_id = fields.Many2one('account.account', string='Received (unfranked)')
+    franking_income_account_id = fields.Many2one('account.account', string='Franking credit income')
+    franking_credit_account_id = fields.Many2one('account.account', string='Franking credit tax credit')
     split_ids = fields.One2many('account.bank.txn.template.split', 'template_id', string='Split',
                                 copy=True)
 
@@ -63,10 +74,20 @@ class BankTxnTemplate(models.Model):
     fee_pct_max = fields.Float(string='Fee max %', default=4.0)
 
     @api.constrains('kind', 'partner_id', 'product_id', 'account_id', 'tax_ids', 'companion_text',
-                    'split_ids')
+                    'split_ids', 'div_franked_account_id', 'div_unfranked_account_id',
+                    'franking_income_account_id', 'franking_credit_account_id',
+                    'franked_pct', 'company_tax_rate')
     def _check_kind_fields(self):
         for t in self:
-            if t.kind == 'split':
+            if t.kind == 'dividend':
+                if not (t.div_franked_account_id and t.div_unfranked_account_id
+                        and t.franking_income_account_id and t.franking_credit_account_id):
+                    raise ValidationError(_("Template '%s' books dividends: set the four dividend accounts.") % t.name)
+                if not 0 <= t.franked_pct <= 100 or not 0 <= t.company_tax_rate < 100:
+                    raise ValidationError(_("Template '%s': franked %% and tax rate are percentages.") % t.name)
+                if t.tax_ids or t.companion_text or t.direction != 'in':
+                    raise ValidationError(_("Template '%s': dividends are money in, with no tax or fees.") % t.name)
+            elif t.kind == 'split':
                 if not t.split_ids:
                     raise ValidationError(_("Template '%s' splits to accounts: add the split lines.") % t.name)
                 if t.tax_ids or t.companion_text:

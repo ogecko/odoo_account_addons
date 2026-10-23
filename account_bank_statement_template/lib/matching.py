@@ -157,6 +157,13 @@ def same_quarter(dates):
     return len(set(quarter_of(d) for d in dates)) <= 1
 
 
+def franking_credit(franked, company_tax_rate):
+    """Franking credit on a franked dividend: the company tax already paid on
+    it, franked / (1 - rate) - franked."""
+    rate = company_tax_rate / 100.0
+    return round(franked * rate / (1 - rate) + 1e-9, 2)
+
+
 def prior_period_end(d):
     """Last day of the quarter before d's (e.g. the BAS period a payment is for)."""
     return date(d.year, (d.month - 1) // 3 * 3 + 1, 1) - timedelta(days=1)
