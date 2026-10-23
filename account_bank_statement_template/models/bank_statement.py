@@ -24,6 +24,31 @@ class AccountBankStatementLine(models.Model):
                                 help="Removed from a proposal by hand: matching skips it.")
     txn_manual_reason = fields.Char(string='Why manual', copy=False)
 
+    @api.multi
+    def action_txn_set_manual(self):
+        """Take bank lines out of their proposals for good: matching skips them
+        until the flag is cleared. The proposal loses the order line made from
+        each one (or one unit of a grouped line) and counts as edited."""
+        for line in self:
+            proposal = line.txn_proposal_id
+            if proposal:
+                proposal._check_editable()
+                for pline in proposal.line_ids.filtered(lambda pl: line in pl.statement_line_ids):
+                    if len(pline.statement_line_ids) == 1:
+                        pline.unlink()
+                    else:
+                        pline.write({'quantity': pline.quantity - 1,
+                                     'statement_line_ids': [(3, line.id)]})
+                proposal._mark_edited()
+            line.write({'txn_proposal_id': False, 'txn_manual': True,
+                        'txn_manual_reason': 'removed by owner'})
+        return True
+
+    @api.multi
+    def action_txn_clear_manual(self):
+        self.write({'txn_manual': False, 'txn_manual_reason': False})
+        return True
+
     def _to_match_dict(self):
         self.ensure_one()
         return {'id': self.id, 'date': fields.Date.from_string(self.date),

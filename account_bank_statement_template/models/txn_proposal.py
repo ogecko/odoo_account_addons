@@ -1,5 +1,6 @@
 # -*- coding: utf-8 -*-
-from odoo import api, fields, models
+from odoo import _, api, fields, models
+from odoo.exceptions import UserError
 from odoo.tools import float_compare
 
 from ..lib import matching
@@ -182,3 +183,62 @@ class BankTxnProposalBuilder(models.Model):
             'statement_line_ids': [(6, 0, all_lines.ids)],
             'line_ids': [(0, 0, v) for v in vals],
         })
+
+
+# Fields the owner edits on a proposal; changing them marks it edited, and they
+# can't change once approved. State and links are written by matching/approval.
+EDITABLE = {'partner_id', 'date', 'line_ids'}
+
+
+class BankTxnProposalEditing(models.Model):
+    _inherit = 'account.bank.txn.proposal'
+
+    @api.model
+    def create(self, vals):
+        # Lines created together with their proposal are part of building it.
+        return super(BankTxnProposalEditing, self.with_context(txn_builder=True)).create(vals)
+
+    @api.multi
+    def write(self, vals):
+        if EDITABLE & set(vals):
+            self._check_editable()
+            if not self.env.context.get('txn_builder'):
+                vals = dict(vals, edited=True)
+        return super(BankTxnProposalEditing, self).write(vals)
+
+    def _check_editable(self):
+        if self.filtered(lambda p: p.state == 'approved'):
+            raise UserError(_("An approved proposal can't be changed."))
+
+    def _mark_edited(self):
+        self._check_editable()
+        if not self.env.context.get('txn_builder'):
+            super(BankTxnProposalEditing, self).write({'edited': True})
+
+    @api.multi
+    def action_discard(self):
+        """Drop open or failed proposals; their bank lines can be matched again."""
+        if self.filtered(lambda p: p.state == 'approved'):
+            raise UserError(_("An approved proposal can't be discarded."))
+        self.unlink()
+        return True
+
+
+class BankTxnProposalLineEditing(models.Model):
+    _inherit = 'account.bank.txn.proposal.line'
+
+    @api.model
+    def create(self, vals):
+        line = super(BankTxnProposalLineEditing, self).create(vals)
+        line.proposal_id._mark_edited()
+        return line
+
+    @api.multi
+    def write(self, vals):
+        self.mapped('proposal_id')._mark_edited()
+        return super(BankTxnProposalLineEditing, self).write(vals)
+
+    @api.multi
+    def unlink(self):
+        self.mapped('proposal_id')._mark_edited()
+        return super(BankTxnProposalLineEditing, self).unlink()
