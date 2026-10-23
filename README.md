@@ -15,13 +15,13 @@ Odoo 10 addons to help with accounting, bank reconciliation and BAS preparation.
 
 ## Make targets
 
+Tests run against the local Odoo stack (`ogecko_accounts`), which mounts this
+working tree read-only; the live server only runs committed code.
+
 | Target | What it does |
 |---|---|
 | `make pure` | Run the Odoo-free unit tests locally (`uv run pytest`). |
-| `make deploy` | Copy the working tree, uncommitted changes included, to the Odoo server. |
-| `make diff` | Show what `deploy` would change on the server. |
-| `make test` | Deploy, then run the addon's Odoo tests in a throwaway database copy that is dropped afterwards. |
-| `make upgrade DB=<db>` | Install or upgrade the addon in a trial database (only the current trial database or a `bst_*` copy). |
-| `make restart` | Restart the live Odoo server so it loads new code. |
+| `make test` | Run the addon's Odoo tests on this working tree, in a throwaway database copy that is dropped afterwards. |
+| `make upgrade DB=bst_<name>` | Install or upgrade this working tree's addon in a throwaway `bst_*` database. |
 
 Tests and trials never run against archived databases.
