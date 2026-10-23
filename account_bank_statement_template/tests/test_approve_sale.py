@@ -46,6 +46,29 @@ class TestApproveSale(TxnCase):
         self.assertEqual(inv.move_id.date, '2026-06-25')
         self.assertEqual(p.sale_order_id.date_order[:10], '2026-06-25')
 
+    def test_order_confirmed_on_invoice_date(self):
+        st, p = self.approved(start=D(2026, 4, 2))
+        self.assertEqual(p.invoice_date, '2026-06-25')
+        self.assertEqual(p.sale_order_id.confirmation_date[:10], '2026-06-25')
+
+    def test_invoice_date_override(self):
+        lines = [(D(2026, 4, 2) + timedelta(weeks=i), 44.00, 'Transfer from J CITIZEN NetBank')
+                 for i in range(13)]
+        st = self.make_statement(lines)
+        st.action_match_templates()
+        p = st.txn_proposal_ids
+        p.invoice_date = '2026-06-30'  # after the statement's last line, same quarter
+        self.assertFalse(p.block_reason)
+        p.action_approve()
+        self.assertEqual(p.state, 'approved', p.fail_reason)
+        inv = p.invoice_id
+        self.assertEqual((inv.date_invoice, inv.date, inv.move_id.date), ('2026-06-30',) * 3)
+        self.assertEqual(p.sale_order_id.date_order[:10], '2026-06-30')
+        self.assertEqual(p.sale_order_id.confirmation_date[:10], '2026-06-30')
+        # The payments stay on their own bank dates.
+        for st_line in p.statement_line_ids:
+            self.assertEqual(st_line.journal_entry_ids.date, st_line.date)
+
     def test_no_delivery_for_service(self):
         st, p = self.approved()
         self.assertEqual(p.sale_order_id.state, 'sale')

@@ -65,6 +65,17 @@ class TestApprovePurchase(TxnCase):
         self.assertEqual(p.invoice_id.move_id.date, '2026-09-04')
         self.assertEqual(p.purchase_order_id.date_order[:10], '2026-09-04')
 
+    def test_order_and_receipt_dates(self):
+        st, p = self.aws()
+        self.assertEqual(p.invoice_date, '2026-09-04')
+        po = p.purchase_order_id
+        self.assertEqual(po.date_planned[:10], '2026-09-04')
+        self.assertEqual(po.date_approve, '2026-09-04')
+        for picking in po.picking_ids:
+            self.assertEqual(picking.min_date[:10], '2026-09-04')
+            self.assertEqual(picking.date_done[:10], '2026-09-04')
+            self.assertEqual(set(d[:10] for d in picking.move_lines.mapped('date')), {'2026-09-04'})
+
     def test_no_receipt_for_service_product(self):
         self.aws_t.product_id = self.service
         st, p = self.aws()

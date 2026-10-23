@@ -1,5 +1,8 @@
 # -*- coding: utf-8 -*-
 import logging
+from datetime import datetime, time
+
+import pytz
 
 from odoo import _, api, fields, models
 from odoo.exceptions import UserError
@@ -17,7 +20,8 @@ class BankTxnProposalApprove(models.Model):
 
     @api.multi
     def action_approve(self):
-        for proposal in self.filtered(lambda p: p.state == 'open'):
+        """Approve open proposals, and failed ones again once their cause is fixed."""
+        for proposal in self.filtered(lambda p: p.state != 'approved'):
             reason = proposal._get_block_reason()
             if reason:
                 raise UserError(_("%s: %s") % (proposal.template_id.name, reason))
@@ -39,6 +43,13 @@ class BankTxnProposalApprove(models.Model):
             self.env.invalidate_all()
             self.write({'state': 'failed', 'fail_reason': getattr(e, 'name', None) or ustr(e)})
 
+    def _datetime(self, day):
+        """Noon on this day in the user's time zone, as Odoo stores datetimes
+        (UTC), so the order, receipt and transfer dates show as that day."""
+        tz = pytz.timezone(self.env.context.get('tz') or self.env.user.tz or 'UTC')
+        local = tz.localize(datetime.combine(fields.Date.from_string(day), time(12)))
+        return fields.Datetime.to_string(local.astimezone(pytz.utc))
+
     def _approve_direct(self):
         moves = self.env['account.move']
         for st_line in self.statement_line_ids:
@@ -52,9 +63,10 @@ class BankTxnProposalApprove(models.Model):
         return {'moves': moves}
 
     def _approve_sale_order(self):
+        when = self._datetime(self.invoice_date)
         order = self.env['sale.order'].create({
             'partner_id': self.partner_id.id,
-            'date_order': self.date,
+            'date_order': when,
             'txn_proposal_id': self.id,
             'order_line': [(0, 0, {
                 'name': line.name,
@@ -65,6 +77,7 @@ class BankTxnProposalApprove(models.Model):
             }) for line in self.line_ids],
         })
         order.action_confirm()
+        order.confirmation_date = when  # Odoo sets now
         # Services invoiced on delivered quantities and tracked by hand: the bank
         # payments are for services already delivered, so state them delivered.
         for line in order.order_line:
@@ -76,9 +89,10 @@ class BankTxnProposalApprove(models.Model):
         return self._validate_and_reconcile(invoice, order=order)
 
     def _approve_purchase_order(self):
+        when = self._datetime(self.invoice_date)
         order = self.env['purchase.order'].create({
             'partner_id': self.partner_id.id,
-            'date_order': self.date,
+            'date_order': when,
             'txn_proposal_id': self.id,
             'order_line': [(0, 0, {
                 'name': line.name,
@@ -87,19 +101,23 @@ class BankTxnProposalApprove(models.Model):
                 'product_uom': line.product_id.uom_po_id.id,
                 'price_unit': line.price_unit,
                 'taxes_id': [(6, 0, line.tax_ids.ids)],
-                'date_planned': self.date,
+                'date_planned': when,
             }) for line in self.line_ids],
         })
         order.button_confirm()
+        order.date_approve = self.invoice_date  # Odoo sets today
         for picking in order.picking_ids.filtered(lambda p: p.state not in ('done', 'cancel')):
             picking.force_assign()
             self.env['stock.immediate.transfer'].create({'pick_id': picking.id}).process()
+            # Odoo stamps the transfer with now; it was received on the bill date.
+            picking.move_lines.write({'date': when})
+            picking.write({'date_done': when})
         # The vendor bill, built the way the "Add Purchase Order" field on a bill
         # does it. The context is the Vendor Bills menu's, so Odoo defaults to the
         # purchase journal (and BILL/ numbering), not the sales journal.
         Invoice = self.env['account.invoice'].with_context(type='in_invoice', journal_type='purchase')
         bill = Invoice.new({'type': 'in_invoice', 'partner_id': self.partner_id.id,
-                            'date_invoice': self.date})
+                            'date_invoice': self.invoice_date})
         bill._onchange_partner_id()
         bill.purchase_id = order
         bill.purchase_order_change()
@@ -108,10 +126,11 @@ class BankTxnProposalApprove(models.Model):
         return self._validate_and_reconcile(invoice, order=order)
 
     def _validate_and_reconcile(self, invoice, order):
-        """Date the invoice on the proposal date (Odoo would use today), validate
-        it, and reconcile every bank line against its receivable/payable line."""
+        """Date the invoice on the proposal's invoice date (Odoo would use today),
+        validate it, and reconcile every bank line against its receivable/payable line."""
         invoice.ensure_one()
-        invoice.write({'date_invoice': self.date, 'date': self.date, 'txn_proposal_id': self.id})
+        invoice.write({'date_invoice': self.invoice_date, 'date': self.invoice_date,
+                       'txn_proposal_id': self.id})
         invoice.action_invoice_open()
         open_line = invoice.move_id.line_ids.filtered(lambda l: l.account_id == invoice.account_id)
         moves = self.env['account.move']
@@ -135,11 +154,14 @@ class BankTxnProposalApprove(models.Model):
                              precision_rounding=self.currency_id.rounding) != 0:
                 raise UserError(_("invoice total %.2f differs from bank total %.2f")
                                 % (invoice.amount_total, self.bank_total))
+            order_day = fields.Datetime.context_timestamp(
+                self, fields.Datetime.from_string(created['order'].date_order))
             for label, value in (('invoice date', invoice.date_invoice),
                                  ('accounting date', invoice.date),
-                                 ('journal entry date', invoice.move_id.date)):
-                if value != self.date:
-                    raise UserError(_("%s %s is not the proposal date %s") % (label, value, self.date))
+                                 ('journal entry date', invoice.move_id.date),
+                                 ('order date', fields.Date.to_string(order_day))):
+                if value != self.invoice_date:
+                    raise UserError(_("%s %s is not the invoice date %s") % (label, value, self.invoice_date))
             dates = [fields.Date.from_string(d) for d in created['moves'].mapped('date')]
             if not matching.same_quarter(dates):
                 raise UserError(_("entries span two quarters"))
@@ -169,8 +191,8 @@ class AccountBankStatementApprove(models.Model):
 
     @api.multi
     def action_approve_ready(self):
-        """Approve every open proposal that isn't blocked; blocked ones are skipped."""
+        """Approve every open or failed proposal that isn't blocked; blocked ones are skipped."""
         proposals = self.mapped('txn_proposal_ids').filtered(
-            lambda p: p.state == 'open' and not p._get_block_reason())
+            lambda p: p.state != 'approved' and not p._get_block_reason())
         proposals.action_approve()
         return True

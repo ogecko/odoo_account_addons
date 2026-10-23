@@ -162,6 +162,20 @@ class TestProposalEditing(TxnCase):
         self.assertFalse(new.edited)
         self.assertEqual(len(new.statement_line_ids), 2)
 
+    def test_discard_closes_and_reloads(self):
+        self.assertEqual(self.p.action_discard(), {'type': 'ir.actions.client', 'tag': 'reload'})
+
+    def test_invoice_date_defaults_to_last_bank_line(self):
+        self.assertEqual(self.p.invoice_date, self.p.date)
+
+    def test_invoice_date_edit_marks_edited(self):
+        self.p.invoice_date = self.p.date[:8] + '28'
+        self.assertTrue(self.p.edited)
+
+    def test_blocked_when_invoice_date_in_another_quarter(self):
+        self.p.invoice_date = '2026-10-01'
+        self.assertEqual(self.p.block_reason, 'invoice date in another quarter')
+
     def test_cannot_discard_approved(self):
         self.p.action_approve()
         with self.assertRaises(UserError):

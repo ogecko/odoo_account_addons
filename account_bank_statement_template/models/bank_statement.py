@@ -62,7 +62,7 @@ class AccountBankStatement(models.Model):
                                        string='Proposals')
     txn_manual_line_ids = fields.One2many('account.bank.statement.line',
                                           compute='_compute_txn_manual_line_ids',
-                                          string='Lines to do by hand')
+                                          string='Lines to do by Hand')
     txn_proposal_count = fields.Integer(compute='_compute_txn_proposal_count',
                                         string='Proposals generated')
 

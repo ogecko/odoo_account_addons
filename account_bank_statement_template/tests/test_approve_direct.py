@@ -69,6 +69,26 @@ class TestApproveDirect(TxnCase):
         self.assertFalse(early.statement_line_ids.journal_entry_ids)
         self.assertTrue(late.statement_line_ids.journal_entry_ids)
 
+    def test_failed_proposal_can_be_approved_again(self):
+        st, p = self.matched([(D(2026, 7, 1), 12.34, 'Credit Interest')])
+        self.lock('2026-07-01')
+        p.action_approve()
+        self.assertEqual(p.state, 'failed')
+        self.assertFalse(p.block_reason)
+        self.lock(None)
+        p.action_approve()
+        self.assertEqual(p.state, 'approved', p.fail_reason)
+        self.assertFalse(p.fail_reason)
+
+    def test_approve_all_retries_failed(self):
+        st, p = self.matched([(D(2026, 7, 1), 12.34, 'Credit Interest')])
+        self.lock('2026-07-01')
+        st.action_approve_ready()
+        self.assertEqual(p.state, 'failed')
+        self.lock(None)
+        st.action_approve_ready()
+        self.assertEqual(p.state, 'approved', p.fail_reason)
+
     def test_lock_date_fails_cleanly(self):
         st, p = self.matched([(D(2026, 7, 1), 12.34, 'Credit Interest')])
         self.lock('2026-07-01')

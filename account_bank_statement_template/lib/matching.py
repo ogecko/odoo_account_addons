@@ -162,12 +162,13 @@ _PLACEHOLDER = re.compile(r'\{(\w+)\}')
 
 def render_description(pattern, line_dates, proposal_date):
     """Fill {year} {first_week} {last_week} {quarter} {date} in a template's
-    line description; unknown placeholders are left as written."""
+    line description; unknown placeholders are left as written. {date} is the
+    line's own bank date (the last one, for a grouped line)."""
     values = {
         'year': '%d' % proposal_date.year,
         'first_week': '%02d' % min(line_dates).isocalendar()[1],
         'last_week': '%02d' % max(line_dates).isocalendar()[1],
         'quarter': quarter_of(proposal_date),
-        'date': proposal_date.strftime('%d/%m/%Y'),
+        'date': max(line_dates).strftime('%d/%m/%Y'),
     }
     return _PLACEHOLDER.sub(lambda m: values.get(m.group(1), m.group(0)), pattern or '')

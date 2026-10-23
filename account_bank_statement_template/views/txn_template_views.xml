@@ -5,7 +5,7 @@
         <field name="name">account.bank.txn.template.tree</field>
         <field name="model">account.bank.txn.template</field>
         <field name="arch" type="xml">
-            <tree string="Bank Templates" editable="bottom">
+            <tree string="Bank Statement Templates" editable="bottom">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="kind"/>
@@ -23,7 +23,7 @@
         <field name="name">account.bank.txn.template.form</field>
         <field name="model">account.bank.txn.template</field>
         <field name="arch" type="xml">
-            <form string="Bank Template">
+            <form string="Bank Statement Template">
                 <sheet>
                     <div class="oe_title">
                         <h1><field name="name" placeholder="e.g. AWS"/></h1>
@@ -46,11 +46,12 @@
                             <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', '=', 'direct')]}"/>
                             <field name="description"/>
                             <div colspan="2" class="text-muted">
-                                Line description placeholders, filled from the matched bank lines:
-                                <code>{year}</code> year of the proposal date,
-                                <code>{first_week}</code> / <code>{last_week}</code> two-digit week numbers (ISO) of the first and last bank line,
-                                <code>{quarter}</code> e.g. 2026Q3,
-                                <code>{date}</code> proposal date as dd/mm/yyyy.
+                                Keywords:
+                                <code>{year}</code>
+                                <code>{first_week}</code>
+                                <code>{last_week}</code>
+                                <code>{quarter}</code>
+                                <code>{date}</code>
                                 Example: <code>Services {year} (Wk{first_week} to Wk{last_week})</code>
                             </div>
                         </group>
@@ -74,7 +75,7 @@
     </record>
 
     <record id="action_bank_txn_template" model="ir.actions.act_window">
-        <field name="name">Bank Templates</field>
+        <field name="name">Bank Statement Templates</field>
         <field name="res_model">account.bank.txn.template</field>
         <field name="view_mode">tree,form</field>
         <field name="context">{'active_test': False}</field>

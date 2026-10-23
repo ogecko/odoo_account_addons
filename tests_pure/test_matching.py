@@ -214,8 +214,14 @@ def test_render_weekly_description():
 
 
 def test_render_quarter_and_date():
+    # {quarter} follows the proposal; {date} is the bank line's own date.
     assert render_description('{quarter} {date}', [date(2026, 7, 3)], date(2026, 9, 4)) \
-        == '2026Q3 04/09/2026'
+        == '2026Q3 03/07/2026'
+
+
+def test_render_date_is_last_line_of_group():
+    assert render_description('{date}', [date(2026, 7, 3), date(2026, 8, 5)], date(2026, 9, 4)) \
+        == '05/08/2026'
 
 
 def test_render_unknown_placeholder_kept():

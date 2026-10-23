@@ -19,17 +19,20 @@ class BankTxnProposal(models.Model):
     template_id = fields.Many2one('account.bank.txn.template', required=True, ondelete='restrict')
     kind = fields.Selection(KINDS, required=True)
     partner_id = fields.Many2one('res.partner')
-    date = fields.Date(required=True)
-    state = fields.Selection([('open', 'Open'), ('approved', 'Approved'), ('failed', 'Failed')],
+    date = fields.Date(string='Last Statement Line', required=True)
+    invoice_date = fields.Date(
+        help="Date of the order and its invoice or bill. Starts as the last statement line's date; "
+             "a sales invoice can be dated later in the same quarter.")
+    state = fields.Selection([('open', 'Open'), ('failed', 'Failed'), ('approved', 'Approved')],
                              default='open', required=True, copy=False)
     edited = fields.Boolean(copy=False)
     statement_line_ids = fields.One2many('account.bank.statement.line', 'txn_proposal_id',
-                                         string='Bank lines')
+                                         string='Statement Lines')
     line_ids = fields.One2many('account.bank.txn.proposal.line', 'proposal_id', string='Lines')
     currency_id = fields.Many2one('res.currency', related='statement_id.currency_id', readonly=True)
     amount_total = fields.Monetary(compute='_compute_amounts')
     bank_total = fields.Monetary(compute='_compute_amounts')
-    bank_line_count = fields.Integer(string='Bank lines', compute='_compute_amounts')
+    bank_line_count = fields.Integer(string='Statement Lines', compute='_compute_amounts')
     block_reason = fields.Char(compute='_compute_block_reason')
     warning = fields.Char(compute='_compute_warning')
     status_label = fields.Char(string='Status', compute='_compute_block_reason')
@@ -52,7 +55,7 @@ class BankTxnProposal(models.Model):
             return 'no bank lines'
         if not self.line_ids:
             return 'no lines to create'
-        if self.state == 'open' and self.statement_line_ids.mapped('journal_entry_ids'):
+        if self.state != 'approved' and self.statement_line_ids.mapped('journal_entry_ids'):
             return 'bank line already reconciled'
         statement_dates = self.statement_id.line_ids.mapped('date')
         if not min(statement_dates) <= self.date <= max(statement_dates):
@@ -61,17 +64,22 @@ class BankTxnProposal(models.Model):
                  for d in self.statement_line_ids.mapped('date') + [self.date]]
         if not matching.same_quarter(dates):
             return 'bank lines span two quarters'
+        if self.kind != 'direct':
+            if not self.invoice_date:
+                return 'no invoice date'
+            if not matching.same_quarter(dates + [fields.Date.from_string(self.invoice_date)]):
+                return 'invoice date in another quarter'
         if float_compare(self.amount_total, self.bank_total,
                          precision_rounding=self.currency_id.rounding) != 0:
             return u'total %.2f ≠ bank %.2f' % (self.amount_total, self.bank_total)
         return False
 
-    @api.depends('state', 'edited', 'date', 'line_ids.price_total',
+    @api.depends('state', 'edited', 'date', 'invoice_date', 'line_ids.price_total',
                  'statement_line_ids.journal_entry_ids', 'statement_line_ids.date')
     def _compute_block_reason(self):
         for p in self:
             state = p.state or 'open'  # unsaved proposals have no state yet
-            p.block_reason = p._get_block_reason() if state == 'open' and p.statement_id else False
+            p.block_reason = p._get_block_reason() if state != 'approved' and p.statement_id else False
             if state != 'open':
                 p.status_label = dict(self._fields['state'].selection)[p.state]
             elif p.block_reason:
@@ -111,7 +119,7 @@ class BankTxnProposalLine(models.Model):
     price_total = fields.Monetary(compute='_compute_price_total', string='Total')
     statement_line_ids = fields.Many2many('account.bank.statement.line',
                                           'account_bank_txn_proposal_line_st_line_rel',
-                                          'line_id', 'statement_line_id', string='From bank lines')
+                                          'line_id', 'statement_line_id', string='From Statement Lines')
 
     @api.depends('quantity', 'price_unit', 'tax_ids', 'product_id')
     def _compute_price_total(self):
@@ -190,7 +198,7 @@ class BankTxnProposalBuilder(models.Model):
 
 # Fields the owner edits on a proposal; changing them marks it edited, and they
 # can't change once approved. State and links are written by matching/approval.
-EDITABLE = {'partner_id', 'date', 'line_ids'}
+EDITABLE = {'partner_id', 'date', 'invoice_date', 'line_ids'}
 
 
 class BankTxnProposalEditing(models.Model):
@@ -198,6 +206,9 @@ class BankTxnProposalEditing(models.Model):
 
     @api.model
     def create(self, vals):
+        # Orders are invoiced on the last bank line's date unless told otherwise.
+        if vals.get('kind') != 'direct' and not vals.get('invoice_date'):
+            vals = dict(vals, invoice_date=vals.get('date'))
         # Lines created together with their proposal are part of building it.
         return super(BankTxnProposalEditing, self.with_context(txn_builder=True)).create(vals)
 
@@ -220,11 +231,12 @@ class BankTxnProposalEditing(models.Model):
 
     @api.multi
     def action_discard(self):
-        """Drop open or failed proposals; their bank lines can be matched again."""
+        """Drop open or failed proposals; their bank lines can be matched again.
+        Reloads the page: closes the proposal dialog and refreshes the statement."""
         if self.filtered(lambda p: p.state == 'approved'):
             raise UserError(_("An approved proposal can't be discarded."))
         self.unlink()
-        return True
+        return {'type': 'ir.actions.client', 'tag': 'reload'}
 
 
 class BankTxnProposalLineEditing(models.Model):

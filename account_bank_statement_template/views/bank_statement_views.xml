@@ -9,7 +9,7 @@
             <form string="Proposal">
                 <header>
                     <button name="action_approve" string="Approve" type="object" class="oe_highlight"
-                            attrs="{'invisible': ['|', ('state', '!=', 'open'), ('block_reason', '!=', False)]}"/>
+                            attrs="{'invisible': ['|', ('state', '=', 'approved'), ('block_reason', '!=', False)]}"/>
                     <button name="action_discard" string="Discard" type="object"
                             attrs="{'invisible': [('state', '=', 'approved')]}"/>
                     <field name="state" widget="statusbar"/>
@@ -26,10 +26,12 @@
                     </div>
                     <group>
                         <group>
-                            <field name="template_id" readonly="1"/>
+                            <!-- close_dialog: the template opens full page, so this dialog closes (static/src/js). -->
+                            <field name="template_id" readonly="1" options="{'close_dialog': True}"/>
                             <field name="kind" readonly="1"/>
                             <field name="partner_id" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': [('state', '=', 'approved')]}"/>
-                            <field name="date" attrs="{'readonly': [('state', '=', 'approved')]}"/>
+                            <field name="date" readonly="1"/>
+                            <field name="invoice_date" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': ['|', ('state', '=', 'approved'), ('kind', '!=', 'sale_order')], 'required': [('kind', '=', 'sale_order')]}"/>
                         </group>
                         <group>
                             <field name="amount_total"/>
@@ -54,7 +56,7 @@
                             <field name="price_total" sum="Total"/>
                         </tree>
                     </field>
-                    <separator string="Bank lines"/>
+                    <separator string="Statement Lines"/>
                     <field name="statement_line_ids" readonly="1">
                         <tree>
                             <field name="date"/>
@@ -83,7 +85,7 @@
                             <button name="action_match_templates" string="Generate" type="object" class="btn-primary"
                                     help="Match the statement's unreconciled lines to the templates and (re)build the proposals. Edited and approved proposals are kept."/>
                             <button name="action_approve_ready" string="Approve All" type="object"
-                                    help="Approve every proposal that isn't blocked: creates the orders, invoices and entries and reconciles the bank lines."
+                                    help="Approve every open or failed proposal that isn't blocked: creates the orders, invoices and entries and reconciles the bank lines."
                                     confirm="Approve every ready proposal? This creates the orders, invoices and entries and reconciles the bank lines."/>
                         </div>
                     </div>
@@ -101,12 +103,12 @@
                             <field name="warning"/>
                             <field name="state" invisible="1"/>
                             <button name="action_approve" string="Approve" type="object" icon="fa-check"
-                                    attrs="{'invisible': ['|', ('state', '!=', 'open'), ('block_reason', '!=', False)]}"/>
+                                    attrs="{'invisible': ['|', ('state', '=', 'approved'), ('block_reason', '!=', False)]}"/>
                             <button name="action_discard" string="Discard" type="object" icon="fa-times"
                                     attrs="{'invisible': [('state', '=', 'approved')]}"/>
                         </tree>
                     </field>
-                    <separator string="Lines to do by hand"/>
+                    <h3>Lines to do by Hand</h3>
                     <field name="txn_manual_line_ids" readonly="1">
                         <tree>
                             <field name="date"/>
