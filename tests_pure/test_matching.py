@@ -176,7 +176,7 @@ def test_fee_unpaired_when_charge_three_days_away():
 
 from datetime import timedelta
 
-from matching import ex_tax_unit, group_by_amount, period_end, quarter_of, render_description, same_quarter, split_amount
+from matching import ex_tax_unit, group_by_amount, period_end, prior_period_end, quarter_of, render_description, same_quarter, split_amount
 
 
 def test_group_by_amount_mixed_prices():
@@ -246,13 +246,20 @@ def test_split_amount_missing_or_inside_a_word():
     assert split_amount('XGST 5', 'GST') is None
 
 
-def test_period_end_is_previous_quarter_end():
-    assert period_end(date(2026, 1, 5)) == date(2025, 12, 31)
-    assert period_end(date(2025, 7, 26)) == date(2025, 6, 30)
-    assert period_end(date(2026, 4, 28)) == date(2026, 3, 31)
-    assert period_end(date(2026, 10, 1)) == date(2026, 9, 30)
+def test_period_end_is_quarter_end():
+    assert period_end(date(2026, 4, 28)) == date(2026, 6, 30)
+    assert period_end(date(2026, 1, 1)) == date(2026, 3, 31)
+    assert period_end(date(2025, 12, 31)) == date(2025, 12, 31)
 
 
-def test_render_period_end():
-    assert render_description('GST period ending {period_end}', [date(2026, 1, 5)], date(2026, 1, 5)) \
-        == 'GST period ending 31 Dec 2025'
+def test_prior_period_end_is_previous_quarter_end():
+    assert prior_period_end(date(2026, 1, 5)) == date(2025, 12, 31)
+    assert prior_period_end(date(2025, 7, 26)) == date(2025, 6, 30)
+    assert prior_period_end(date(2026, 4, 28)) == date(2026, 3, 31)
+    assert prior_period_end(date(2026, 10, 1)) == date(2026, 9, 30)
+
+
+def test_render_period_ends():
+    # A BAS payment on 28 Apr is for the quarter ending 31 Mar.
+    assert render_description('GST {prior_period_end} / {period_end}', [date(2026, 4, 28)],
+                              date(2026, 4, 28)) == 'GST 31 Mar 2026 / 30 Jun 2026'

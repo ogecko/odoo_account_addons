@@ -75,5 +75,5 @@ class TestScreenLayout(TransactionCase):
 
     def test_template_form_lists_description_placeholders(self):
         arch = self.env['account.bank.txn.template'].fields_view_get(view_type='form')['arch']
-        for placeholder in ('{year}', '{first_week}', '{last_week}', '{quarter}', '{date}', '{period_end}'):
+        for placeholder in ('{year}', '{first_week}', '{last_week}', '{quarter}', '{date}', '{period_end}', '{prior_period_end}'):
             self.assertIn(placeholder, arch)

@@ -18,9 +18,9 @@ class TestApproveSplit(TxnCase):
             name='BAS', kind='split', direction='out', match_text='tax office payments.*4444',
             match_is_regex=True, amount_min=1.0, amount_max=5000.0, account_id=False,
             split_ids=[(0, 0, {'keyword': 'GST', 'account_id': self.gst_net.id,
-                               'description': 'GST period ending {period_end}'}),
+                               'description': 'GST period ending {prior_period_end}'}),
                        (0, 0, {'keyword': 'PAYG', 'account_id': self.payg.id,
-                               'description': 'PAYG period ending {period_end}'})])
+                               'description': 'PAYG period ending {prior_period_end}'})])
 
     def matched(self, lines):
         st = self.make_statement(lines)

@@ -47,7 +47,7 @@ class BankTxnTemplate(models.Model):
         string='Taxes')
     description = fields.Char(
         string='Line description',
-        help="Placeholders: {year} {first_week} {last_week} {quarter} {date} {period_end}")
+        help="Placeholders: {year} {first_week} {last_week} {quarter} {date} {period_end} {prior_period_end}")
     split_ids = fields.One2many('account.bank.txn.template.split', 'template_id', string='Split',
                                 copy=True)
 
@@ -127,4 +127,4 @@ class BankTxnTemplateSplit(models.Model):
                                              "description, e.g. GST in 'GST 12 PAYG 300'.")
     account_id = fields.Many2one('account.account', string='Account', required=True)
     description = fields.Char(string='Line description',
-                              help="Placeholders as on the template, e.g. GST period ending {period_end}")
+                              help="Placeholders as on the template, e.g. GST period ending {prior_period_end}")

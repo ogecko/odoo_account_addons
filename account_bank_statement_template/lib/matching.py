@@ -157,9 +157,14 @@ def same_quarter(dates):
     return len(set(quarter_of(d) for d in dates)) <= 1
 
 
-def period_end(d):
+def prior_period_end(d):
     """Last day of the quarter before d's (e.g. the BAS period a payment is for)."""
     return date(d.year, (d.month - 1) // 3 * 3 + 1, 1) - timedelta(days=1)
+
+
+def period_end(d):
+    """Last day of d's quarter."""
+    return prior_period_end(prior_period_end(d) + timedelta(days=100))
 
 
 def split_amount(name, keyword):
@@ -174,10 +179,11 @@ _PLACEHOLDER = re.compile(r'\{(\w+)\}')
 
 
 def render_description(pattern, line_dates, proposal_date):
-    """Fill {year} {first_week} {last_week} {quarter} {date} {period_end} in a
-    template's line description; unknown placeholders are left as written.
-    {date} is the line's own bank date (the last one, for a grouped line);
-    {period_end} the end of the quarter before it."""
+    """Fill {year} {first_week} {last_week} {quarter} {date} {period_end}
+    {prior_period_end} in a template's line description; unknown placeholders
+    are left as written. {date} is the line's own bank date (the last one, for
+    a grouped line); {period_end} the end of its quarter, {prior_period_end}
+    the end of the quarter before."""
     values = {
         'year': '%d' % proposal_date.year,
         'first_week': '%02d' % min(line_dates).isocalendar()[1],
@@ -185,5 +191,6 @@ def render_description(pattern, line_dates, proposal_date):
         'quarter': quarter_of(proposal_date),
         'date': max(line_dates).strftime('%d/%m/%Y'),
         'period_end': period_end(max(line_dates)).strftime('%d %b %Y'),
+        'prior_period_end': prior_period_end(max(line_dates)).strftime('%d %b %Y'),
     }
     return _PLACEHOLDER.sub(lambda m: values.get(m.group(1), m.group(0)), pattern or '')

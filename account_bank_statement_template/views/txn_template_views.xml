@@ -53,6 +53,7 @@
                                 <code>{quarter}</code>
                                 <code>{date}</code>
                                 <code>{period_end}</code>
+                                <code>{prior_period_end}</code>
                                 Example: <code>Services {year} (Wk{first_week} to Wk{last_week})</code>
                             </div>
                         </group>
