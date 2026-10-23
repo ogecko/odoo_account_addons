@@ -45,6 +45,14 @@
                             <field name="account_id" attrs="{'invisible': [('kind', '!=', 'direct')]}"/>
                             <field name="tax_ids" widget="many2many_tags" attrs="{'invisible': [('kind', '=', 'direct')]}"/>
                             <field name="description"/>
+                            <div colspan="2" class="text-muted">
+                                Line description placeholders, filled from the matched bank lines:
+                                <code>{year}</code> year of the proposal date,
+                                <code>{first_week}</code> / <code>{last_week}</code> two-digit week numbers (ISO) of the first and last bank line,
+                                <code>{quarter}</code> e.g. 2026Q3,
+                                <code>{date}</code> proposal date as dd/mm/yyyy.
+                                Example: <code>Services {year} (Wk{first_week} to Wk{last_week})</code>
+                            </div>
                         </group>
                     </group>
                     <group string="Fee" attrs="{'invisible': [('kind', '=', 'direct')]}">

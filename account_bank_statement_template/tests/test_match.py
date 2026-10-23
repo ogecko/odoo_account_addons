@@ -144,3 +144,11 @@ class TestMatch(TxnCase):
         st.action_match_templates()
         self.assertEqual(self.env['res.partner'].search_count([]), before)
         self.assertEqual(self.proposals(st, self.aws_t).partner_id, self.vendor)
+
+    def test_proposal_count_on_statement(self):
+        st = self.make_statement([(D(2026, 7, 1), 12.34, 'Credit Interest'),
+                                  (D(2026, 7, 6), -111.11, 'AMAZON WEB SERVICES'),
+                                  (D(2026, 7, 7), 5.00, 'Something else')])
+        self.assertEqual(st.txn_proposal_count, 0)
+        st.action_match_templates()
+        self.assertEqual(st.txn_proposal_count, 2)

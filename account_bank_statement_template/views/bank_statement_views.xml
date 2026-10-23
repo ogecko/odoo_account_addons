@@ -73,14 +73,20 @@
         <field name="model">account.bank.statement</field>
         <field name="inherit_id" ref="account.view_bank_statement_form"/>
         <field name="arch" type="xml">
-            <xpath expr="//header" position="inside">
-                <button name="action_match_templates" string="Match templates" type="object"
-                        groups="account.group_account_manager" states="open"/>
-                <button name="action_approve_ready" string="Approve ready" type="object"
-                        groups="account.group_account_manager" states="open"/>
-            </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Proposals" name="txn_proposals" groups="account.group_account_manager">
+                    <div class="row">
+                        <div class="col-xs-8">
+                            <h3>Lines Matched (<field name="txn_proposal_count" class="oe_inline"/> proposals generated)</h3>
+                        </div>
+                        <div class="col-xs-4 text-right" attrs="{'invisible': [('state', '!=', 'open')]}">
+                            <button name="action_match_templates" string="Generate" type="object" class="btn-primary"
+                                    help="Match the statement's unreconciled lines to the templates and (re)build the proposals. Edited and approved proposals are kept."/>
+                            <button name="action_approve_ready" string="Approve All" type="object"
+                                    help="Approve every proposal that isn't blocked: creates the orders, invoices and entries and reconciles the bank lines."
+                                    confirm="Approve every ready proposal? This creates the orders, invoices and entries and reconciles the bank lines."/>
+                        </div>
+                    </div>
                     <field name="txn_proposal_ids" readonly="1" context="{'form_view_ref': 'account_bank_statement_template.view_bank_txn_proposal_form'}">
                         <tree decoration-danger="state == 'failed' or block_reason" decoration-muted="state == 'approved'">
                             <field name="template_id"/>

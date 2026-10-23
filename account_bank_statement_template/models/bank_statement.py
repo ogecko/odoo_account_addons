@@ -63,6 +63,13 @@ class AccountBankStatement(models.Model):
     txn_manual_line_ids = fields.One2many('account.bank.statement.line',
                                           compute='_compute_txn_manual_line_ids',
                                           string='Lines to do by hand')
+    txn_proposal_count = fields.Integer(compute='_compute_txn_proposal_count',
+                                        string='Proposals generated')
+
+    @api.depends('txn_proposal_ids')
+    def _compute_txn_proposal_count(self):
+        for st in self:
+            st.txn_proposal_count = len(st.txn_proposal_ids)
 
     @api.depends('line_ids.journal_entry_ids', 'line_ids.txn_proposal_id')
     def _compute_txn_manual_line_ids(self):
