@@ -29,6 +29,7 @@ class BankTxnProposal(models.Model):
     currency_id = fields.Many2one('res.currency', related='statement_id.currency_id', readonly=True)
     amount_total = fields.Monetary(compute='_compute_amounts')
     bank_total = fields.Monetary(compute='_compute_amounts')
+    bank_line_count = fields.Integer(string='Bank lines', compute='_compute_amounts')
     block_reason = fields.Char(compute='_compute_block_reason')
     warning = fields.Char(compute='_compute_warning')
     status_label = fields.Char(string='Status', compute='_compute_block_reason')
@@ -43,6 +44,7 @@ class BankTxnProposal(models.Model):
         for p in self:
             p.amount_total = sum(p.line_ids.mapped('price_total'))
             p.bank_total = sum(abs(a) for a in p.statement_line_ids.mapped('amount'))
+            p.bank_line_count = len(p.statement_line_ids)
 
     def _get_block_reason(self):
         self.ensure_one()

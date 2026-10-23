@@ -25,6 +25,7 @@
     'data': [
         'security/ir.model.access.csv',
         'views/txn_template_views.xml',
+        'views/bank_statement_views.xml',
     ],
     'installable': True,
 }

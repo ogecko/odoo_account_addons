@@ -1,0 +1,120 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+
+    <!-- A proposal, opened from the statement's Proposals tab as a dialog. -->
+    <record id="view_bank_txn_proposal_form" model="ir.ui.view">
+        <field name="name">account.bank.txn.proposal.form</field>
+        <field name="model">account.bank.txn.proposal</field>
+        <field name="arch" type="xml">
+            <form string="Proposal">
+                <header>
+                    <button name="action_approve" string="Approve" type="object" class="oe_highlight"
+                            attrs="{'invisible': ['|', ('state', '!=', 'open'), ('block_reason', '!=', False)]}"/>
+                    <button name="action_discard" string="Discard" type="object"
+                            attrs="{'invisible': [('state', '=', 'approved')]}"/>
+                    <field name="state" widget="statusbar"/>
+                </header>
+                <sheet>
+                    <div class="alert alert-danger" role="alert" attrs="{'invisible': [('block_reason', '=', False)]}">
+                        Can't approve: <field name="block_reason" readonly="1" class="oe_inline"/>
+                    </div>
+                    <div class="alert alert-warning" role="alert" attrs="{'invisible': [('warning', '=', False)]}">
+                        <field name="warning" readonly="1" class="oe_inline"/>
+                    </div>
+                    <div class="alert alert-danger" role="alert" attrs="{'invisible': [('state', '!=', 'failed')]}">
+                        Approval failed: <field name="fail_reason" readonly="1" class="oe_inline"/>
+                    </div>
+                    <group>
+                        <group>
+                            <field name="template_id" readonly="1"/>
+                            <field name="kind" readonly="1"/>
+                            <field name="partner_id" attrs="{'invisible': [('kind', '=', 'direct')], 'readonly': [('state', '=', 'approved')]}"/>
+                            <field name="date" attrs="{'readonly': [('state', '=', 'approved')]}"/>
+                        </group>
+                        <group>
+                            <field name="amount_total"/>
+                            <field name="bank_total"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="statement_id" invisible="1"/>
+                            <field name="sale_order_id" attrs="{'invisible': [('sale_order_id', '=', False)]}"/>
+                            <field name="purchase_order_id" attrs="{'invisible': [('purchase_order_id', '=', False)]}"/>
+                            <field name="invoice_id" attrs="{'invisible': [('invoice_id', '=', False)]}"/>
+                        </group>
+                    </group>
+                    <field name="line_ids" attrs="{'readonly': [('state', '=', 'approved')]}">
+                        <tree editable="bottom">
+                            <field name="sequence" widget="handle"/>
+                            <field name="name"/>
+                            <field name="product_id"/>
+                            <field name="account_id"/>
+                            <field name="quantity"/>
+                            <field name="price_unit"/>
+                            <field name="tax_ids" widget="many2many_tags"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="price_total" sum="Total"/>
+                        </tree>
+                    </field>
+                    <separator string="Bank lines"/>
+                    <field name="statement_line_ids" readonly="1">
+                        <tree>
+                            <field name="date"/>
+                            <field name="name"/>
+                            <field name="amount" sum="Total"/>
+                        </tree>
+                    </field>
+                </sheet>
+            </form>
+        </field>
+    </record>
+
+    <!-- Matching, proposals and the lines left to do by hand, on the statement itself. -->
+    <record id="view_bank_statement_form_txn" model="ir.ui.view">
+        <field name="name">account.bank.statement.form.txn</field>
+        <field name="model">account.bank.statement</field>
+        <field name="inherit_id" ref="account.view_bank_statement_form"/>
+        <field name="arch" type="xml">
+            <xpath expr="//header" position="inside">
+                <button name="action_match_templates" string="Match templates" type="object"
+                        groups="account.group_account_manager" states="open"/>
+                <button name="action_approve_ready" string="Approve ready" type="object"
+                        groups="account.group_account_manager" states="open"/>
+            </xpath>
+            <xpath expr="//notebook" position="inside">
+                <page string="Proposals" name="txn_proposals" groups="account.group_account_manager">
+                    <field name="txn_proposal_ids" readonly="1" context="{'form_view_ref': 'account_bank_statement_template.view_bank_txn_proposal_form'}">
+                        <tree decoration-danger="state == 'failed' or block_reason" decoration-muted="state == 'approved'">
+                            <field name="template_id"/>
+                            <field name="partner_id"/>
+                            <field name="date"/>
+                            <field name="bank_line_count"/>
+                            <field name="currency_id" invisible="1"/>
+                            <field name="amount_total" sum="Total"/>
+                            <field name="bank_total" sum="Total"/>
+                            <field name="status_label"/>
+                            <field name="block_reason"/>
+                            <field name="warning"/>
+                            <field name="state" invisible="1"/>
+                            <button name="action_approve" string="Approve" type="object" icon="fa-check"
+                                    attrs="{'invisible': ['|', ('state', '!=', 'open'), ('block_reason', '!=', False)]}"/>
+                            <button name="action_discard" string="Discard" type="object" icon="fa-times"
+                                    attrs="{'invisible': [('state', '=', 'approved')]}"/>
+                        </tree>
+                    </field>
+                    <separator string="Lines to do by hand"/>
+                    <field name="txn_manual_line_ids" readonly="1">
+                        <tree>
+                            <field name="date"/>
+                            <field name="name"/>
+                            <field name="amount"/>
+                            <field name="txn_manual_reason"/>
+                            <field name="txn_manual" invisible="1"/>
+                            <button name="action_txn_clear_manual" string="Match again" type="object" icon="fa-undo"
+                                    attrs="{'invisible': [('txn_manual', '=', False)]}"/>
+                        </tree>
+                    </field>
+                </page>
+            </xpath>
+        </field>
+    </record>
+
+</odoo>
