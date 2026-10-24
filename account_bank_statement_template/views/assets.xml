@@ -4,6 +4,7 @@
         <xpath expr="." position="inside">
             <script type="text/javascript" src="/account_bank_statement_template/static/src/js/proposal_dialog.js"/>
             <script type="text/javascript" src="/account_bank_statement_template/static/src/js/open_tab.js"/>
+            <link rel="stylesheet" href="/account_bank_statement_template/static/src/css/proposal_documents.css"/>
         </xpath>
     </template>
 </odoo>

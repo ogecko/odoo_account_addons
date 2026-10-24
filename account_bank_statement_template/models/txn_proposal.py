@@ -37,6 +37,11 @@ class BankTxnProposal(models.Model):
     warning = fields.Char(compute='_compute_warning')
     status_label = fields.Char(string='Status', compute='_compute_block_reason')
     fail_reason = fields.Text(copy=False)
+    attachment_ids = fields.Many2many('ir.attachment', 'account_bank_txn_proposal_attachment_rel',
+                                      'proposal_id', 'attachment_id', string='Documents', copy=False,
+                                      help="Supporting documents, e.g. the dividend statement. They can "
+                                           "be added after approval too.")
+    attachment_count = fields.Integer(string='Docs', compute='_compute_attachment_count')
     franked_amount = fields.Monetary(help="Franked part of the dividend; the rest is unfranked. "
                                           "Changing it refills the lines.")
     franking_tax_rate = fields.Float(string='Company tax rate %', readonly=True)
@@ -92,6 +97,11 @@ class BankTxnProposal(models.Model):
                 p.status_label = 'Blocked'
             else:
                 p.status_label = 'Edited' if p.edited else 'Ready'
+
+    @api.depends('attachment_ids')
+    def _compute_attachment_count(self):
+        for p in self:
+            p.attachment_count = len(p.attachment_ids)
 
     @api.depends('partner_id', 'kind')
     def _compute_warning(self):
@@ -269,7 +279,18 @@ class BankTxnProposalEditing(models.Model):
             self._check_editable()
             if not self.env.context.get('txn_builder'):
                 vals = dict(vals, edited=True)
+        if 'attachment_ids' in vals and not self.env.context.get('txn_builder'):
+            # Documents can be added in any state; on an open proposal they also
+            # keep it through Generate, like an edit.
+            open_ones = self.filtered(lambda p: p.state != 'approved' and not p.edited)
+            if open_ones:
+                super(BankTxnProposalEditing, open_ones).write({'edited': True})
         res = super(BankTxnProposalEditing, self).write(vals)
+        if 'attachment_ids' in vals:
+            # Link uploads to their proposal, so they go with it if it's discarded.
+            for p in self:
+                p.attachment_ids.filtered(lambda a: (a.res_model, a.res_id) != (p._name, p.id)).sudo().write(
+                    {'res_model': p._name, 'res_id': p.id})
         if 'franked_amount' in vals:
             for p in self.filtered(lambda p: p.kind == 'dividend'):
                 p._apply_franked_amount()

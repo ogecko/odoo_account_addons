@@ -66,10 +66,11 @@
                             <field name="amount" sum="Total"/>
                         </tree>
                     </field>
+                    <separator string="Documents"/>
+                    <field name="attachment_ids" widget="many2many_binary" nolabel="1" class="o_txn_documents"/>
                 </sheet>
                 <footer>
-                    <button name="action_save" string="Save" type="object" class="btn-primary"
-                            attrs="{'invisible': [('state', '=', 'approved')]}"/>
+                    <button name="action_save" string="Save" type="object" class="btn-primary"/>
                     <button string="Close" special="cancel"/>
                 </footer>
             </form>
@@ -112,6 +113,7 @@
                             <field name="status_label"/>
                             <field name="block_reason"/>
                             <field name="warning"/>
+                            <field name="attachment_count"/>
                             <field name="state" invisible="1"/>
                             <button name="action_approve" string="Approve" type="object" icon="fa-check"
                                     attrs="{'invisible': ['|', ('state', '=', 'approved'), ('block_reason', '!=', False)]}"/>
