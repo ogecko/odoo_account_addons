@@ -82,6 +82,9 @@
         <field name="model">account.bank.statement</field>
         <field name="inherit_id" ref="account.view_bank_statement_form"/>
         <field name="arch" type="xml">
+            <xpath expr="//field[@name='balance_end_real']/.." position="after">
+                <field name="txn_bank_balance" attrs="{'invisible': [('txn_bank_balance', '=', 0)]}"/>
+            </xpath>
             <xpath expr="//notebook" position="inside">
                 <page string="Proposals" name="txn_proposals" groups="account.group_account_manager">
                     <div class="row">

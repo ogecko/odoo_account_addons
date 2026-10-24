@@ -21,6 +21,7 @@
     'depends': [
         'sale',
         'purchase',
+        'account_bank_statement_import',
     ],
     'data': [
         'security/ir.model.access.csv',
