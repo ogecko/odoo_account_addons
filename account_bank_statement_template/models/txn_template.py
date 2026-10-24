@@ -138,25 +138,83 @@ class BankTxnTemplate(models.Model):
         proposals.unlink()
         return super(BankTxnTemplate, self).unlink()
 
+    # Templates move between databases (a trial and live) by Odoo's export and
+    # import. Linked records are written by name, or by a real external id
+    # (e.g. l10n_au taxes and accounts), never by the '__export__' ids Odoo
+    # makes up, which exist only in the database exported from.
+    NAME_KEYS = {'account.account': 'code', 'account.journal': 'name'}
+
+    def _field_at(self, path):
+        model, field = self, None
+        for part in path.split('/'):
+            field = model._fields.get(part) if model is not None else None
+            model = self.env[field.comodel_name] if field is not None and field.relational else None
+        return field
+
+    def _portable_ref(self, record):
+        data = self.env['ir.model.data'].search(
+            [('model', '=', record._name), ('res_id', '=', record.id), ('module', '!=', '__export__')], limit=1)
+        if data:
+            return '%s.%s' % (data.module, data.name)
+        return record[self.NAME_KEYS[record._name]] if record._name in self.NAME_KEYS else record.display_name
+
+    def _resolve_ref(self, comodel, value, row):
+        """Database id of a record written as an external id or a name."""
+        if '.' in value:
+            record = self.env.ref(value, raise_if_not_found=False)
+            if record and record._name == comodel:
+                return record.id
+        Model = self.env[comodel]
+        key = self.NAME_KEYS.get(comodel)
+        found = Model.search([(key, '=', value)]) if key else Model.browse()
+        if not found:
+            found = Model.browse([r[0] for r in Model.name_search(value, operator='ilike', limit=None)])
+            found = found.filtered(lambda r: r.display_name == value or
+                                   (key and r[key] == value) or r.display_name.split(' (')[0] == value)
+        if len(found) != 1:
+            raise UserError(_("Row %d: %s %s named '%s'.") % (
+                row, 'no' if not found else 'several', Model._description, value))
+        return found.id
+
+    @api.multi
+    def export_data(self, fields_to_export, raw_data=False):
+        paths, swap = list(fields_to_export), {}
+        for i, path in enumerate(paths):
+            if path.endswith('/id'):
+                field = self._field_at(path[:-3])
+                if field is not None and field.type in ('many2one', 'many2many'):
+                    paths[i] = path[:-3] + '/.id'
+                    swap[i] = field.comodel_name
+        result = super(BankTxnTemplate, self).export_data(paths, raw_data)
+        for row in result['datas']:
+            for i, comodel in swap.items():
+                ids = [int(x) for x in str(row[i] or '').split(',') if x]
+                row[i] = ','.join(self._portable_ref(r) for r in self.env[comodel].browse(ids))
+        return result
+
     @api.model
     def load(self, fields, data):
-        """Import what Odoo's own export writes: accounts and journals appear
-        there by display name ('81000 Interest Income', 'Bank (AUD)'), which
-        the import can't find, so swap in the code or plain name first."""
-        keys = {'account.account': 'code', 'account.journal': 'name'}
-        columns = []
+        fields, data = list(fields), [list(row) for row in data]
         for i, path in enumerate(fields):
-            model, field = self, None
-            for part in path.split('/'):
-                field = model._fields.get(part) if model is not None else None
-                model = self.env[field.comodel_name] if field is not None and field.relational else None
-            if field is not None and field.type == 'many2one' and field.comodel_name in keys:
-                records = self.env[field.comodel_name].search([])
-                columns.append((i, {r.display_name: r[keys[field.comodel_name]] for r in records}))
-        data = [list(row) for row in data]
-        for row in data:
-            for i, names in columns:
-                row[i] = names.get(row[i], row[i])
+            if path.endswith('/id'):
+                field = self._field_at(path[:-3])
+                if field is None or field.type not in ('many2one', 'many2many'):
+                    continue
+                for n, row in enumerate(data, 2):
+                    values = [v.strip() for v in (row[i] or '').split(',') if v.strip()]
+                    if field.type == 'many2one':
+                        values = [row[i].strip()] if (row[i] or '').strip() else []
+                    row[i] = ','.join(str(self._resolve_ref(field.comodel_name, v, n)) for v in values)
+                fields[i] = path[:-3] + '/.id'
+            else:
+                # Without "Import-Compatible Export", links are display names
+                # ('81000 Interest Income', 'Bank (AUD)').
+                field = self._field_at(path)
+                if field is not None and field.type == 'many2one' and field.comodel_name in self.NAME_KEYS:
+                    key = self.NAME_KEYS[field.comodel_name]
+                    names = {r.display_name: r[key] for r in self.env[field.comodel_name].search([])}
+                    for row in data:
+                        row[i] = names.get(row[i], row[i])
         # Re-importing an export updates the templates by id; their split lines
         # are replaced by the file's, as split line ids from another database
         # can't be found.

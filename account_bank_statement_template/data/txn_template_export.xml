@@ -1,14 +1,14 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Saved export list whose CSV imports back as Bank Statement Templates:
-         in Export, tick "Import-Compatible Export" and pick this list. The id
-         column makes a re-import update the templates it came from instead
-         of adding copies (their split lines are replaced by the file's). -->
+         in Export, tick "Import-Compatible Export" and pick this list. That adds
+         an id column, so a re-import updates the templates it came from
+         instead of adding copies (their split lines are replaced by the
+         file's). Linked records are written by name (see txn_template.py). -->
     <record id="txn_template_export" model="ir.exports">
         <field name="name">Bank Statement Templates (import)</field>
         <field name="resource">account.bank.txn.template</field>
         <field name="export_fields" eval="[(5, 0, 0),
-                (0, 0, {'name': 'id'}),
                 (0, 0, {'name': 'name'}),
                 (0, 0, {'name': 'active'}),
                 (0, 0, {'name': 'sequence'}),
