@@ -2,7 +2,7 @@
 import re
 
 from odoo import _, api, fields, models
-from odoo.exceptions import ValidationError
+from odoo.exceptions import UserError, ValidationError
 
 KINDS = [
     ('direct', 'Direct to account'),
@@ -121,6 +121,22 @@ class BankTxnTemplate(models.Model):
                     except re.error as e:
                         raise ValidationError(_("Template '%s': invalid regular expression '%s' (%s)")
                                               % (t.name, text, e))
+
+    @api.multi
+    def unlink(self):
+        """Open and failed proposals go with their template; approved ones are
+        the record of what it created, so their template can only be archived."""
+        proposals = self.env['account.bank.txn.proposal'].search([('template_id', 'in', self.ids)])
+        approved = proposals.filtered(lambda p: p.state == 'approved')
+        if approved:
+            lines = []
+            for t in approved.mapped('template_id'):
+                statements = approved.filtered(lambda p: p.template_id == t).mapped('statement_id')
+                lines.append(_("Template '%s' has approved proposals (statement %s).")
+                             % (t.name, ', '.join(st.name or '%s %s' % (st.journal_id.name, st.date) for st in statements)))
+            raise UserError('\n'.join(lines) + '\n' + _("Archive it instead: Action > Archive."))
+        proposals.unlink()
+        return super(BankTxnTemplate, self).unlink()
 
     @api.model
     def load(self, fields, data):

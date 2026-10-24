@@ -112,3 +112,28 @@ class TestApproveDirect(TxnCase):
         st.action_approve_ready()
         self.assertEqual(p.state, 'open')
         self.assertFalse(st.line_ids.journal_entry_ids)
+
+
+class TestDeleteTemplate(TestApproveDirect):
+
+    def test_delete_takes_open_proposals_and_frees_lines(self):
+        st, p = self.matched([(D(2026, 7, 1), 12.34, 'Credit Interest')])
+        self.assertEqual(p.state, 'open')
+        self.interest_t.unlink()
+        self.assertFalse(p.exists())
+        self.assertFalse(st.line_ids.txn_proposal_id)
+        self.assertEqual(st.txn_manual_line_ids, st.line_ids)
+
+    def test_delete_refused_with_approved_proposal(self):
+        self.lock(None)
+        st, p = self.matched([(D(2026, 7, 1), 12.34, 'Credit Interest')])
+        p.action_approve()
+        st.name = 'TXN-ST-1'
+        with self.assertRaises(UserError) as e:
+            self.interest_t.unlink()
+        self.assertEqual(e.exception.name, "Template 'Interest' has approved proposals (statement TXN-ST-1).\n"
+                                           "Archive it instead: Action > Archive.")
+        self.assertTrue(self.interest_t.exists())
+        self.assertTrue(p.exists())
+        self.interest_t.write({'active': False})
+        self.assertFalse(self.interest_t.active)
