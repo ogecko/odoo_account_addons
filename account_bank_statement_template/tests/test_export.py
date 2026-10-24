@@ -61,3 +61,49 @@ class TestExportImport(TxnCase):
         result = self.T.load(self.fields, rows)
         self.assertEqual(result['messages'], [])
         self.assertEqual(self.snapshot(self.T.browse(result['ids'])), before)
+
+    def counts(self):
+        return (self.T.search_count([]), self.env['account.bank.txn.template.split'].search_count([]))
+
+    def test_list_has_id_column(self):
+        self.assertEqual(self.fields[0], 'id')
+        self.assertNotIn('split_ids/id', self.fields)
+
+    def test_split_line_ids_are_ignored(self):
+        """A file with split line ids from another database still loads."""
+        templates = self.T.search([])
+        fields = self.fields + ['split_ids/id']
+        rows = templates.export_data(fields)['datas']
+        rows = [r[:-1] + ['__export__.elsewhere_%d' % n if r[-1] else ''] for n, r in enumerate(rows)]
+        before, counts = self.snapshot(templates), self.counts()
+        self.assertEqual(self.T.load(fields, rows)['messages'], [])
+        self.assertEqual(self.counts(), counts)
+        templates.invalidate_cache()
+        self.assertEqual(self.snapshot(templates), before)
+
+    def test_reimport_updates_in_place(self):
+        templates = self.T.search([])
+        before, counts = self.snapshot(templates), self.counts()
+        rows = templates.export_data(self.fields)['datas']
+        result = self.T.load(self.fields, rows)
+        self.assertEqual(result['messages'], [])
+        self.assertEqual(sorted(result['ids']), sorted(templates.ids))
+        self.assertEqual(self.counts(), counts)
+        templates.invalidate_cache()
+        self.assertEqual(self.snapshot(templates), before)
+        # An edit in the file lands on the existing template.
+        col = self.fields.index('match_text')
+        for row in rows:
+            if row[col] == 'interest':
+                row[col] = 'interest paid'
+        self.T.load(self.fields, rows)
+        self.assertEqual(self.counts(), counts)
+        self.assertEqual(self.T.search([('name', '=', 'Interest')]).match_text, 'interest paid')
+
+    def test_blank_id_creates(self):
+        templates = self.T.search([])
+        rows = templates.export_data(self.fields)['datas']
+        rows = [[''] + r[1:] for r in rows]
+        count = self.counts()[0]
+        self.assertEqual(self.T.load(self.fields, rows)['messages'], [])
+        self.assertEqual(self.counts()[0], count * 2)

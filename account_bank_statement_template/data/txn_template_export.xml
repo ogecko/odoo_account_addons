@@ -1,137 +1,46 @@
 <?xml version="1.0" encoding="utf-8"?>
 <odoo>
     <!-- Saved export list whose CSV imports back as Bank Statement Templates:
-         in Export, tick "Import-Compatible Export" and pick this list. -->
+         in Export, tick "Import-Compatible Export" and pick this list. The id
+         column makes a re-import update the templates it came from instead
+         of adding copies (their split lines are replaced by the file's). -->
     <record id="txn_template_export" model="ir.exports">
         <field name="name">Bank Statement Templates (import)</field>
         <field name="resource">account.bank.txn.template</field>
-    </record>
-    <record id="txn_template_export_name" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">name</field>
-    </record>
-    <record id="txn_template_export_active" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">active</field>
-    </record>
-    <record id="txn_template_export_sequence" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">sequence</field>
-    </record>
-    <record id="txn_template_export_kind" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">kind</field>
-    </record>
-    <record id="txn_template_export_journal_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">journal_id</field>
-    </record>
-    <record id="txn_template_export_direction" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">direction</field>
-    </record>
-    <record id="txn_template_export_match_text" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">match_text</field>
-    </record>
-    <record id="txn_template_export_match_is_regex" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">match_is_regex</field>
-    </record>
-    <record id="txn_template_export_amount_min" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">amount_min</field>
-    </record>
-    <record id="txn_template_export_amount_max" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">amount_max</field>
-    </record>
-    <record id="txn_template_export_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">account_id</field>
-    </record>
-    <record id="txn_template_export_partner_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">partner_id</field>
-    </record>
-    <record id="txn_template_export_product_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">product_id</field>
-    </record>
-    <record id="txn_template_export_tax_ids_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">tax_ids/id</field>
-    </record>
-    <record id="txn_template_export_description" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">description</field>
-    </record>
-    <record id="txn_template_export_companion_text" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">companion_text</field>
-    </record>
-    <record id="txn_template_export_companion_is_regex" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">companion_is_regex</field>
-    </record>
-    <record id="txn_template_export_companion_product_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">companion_product_id</field>
-    </record>
-    <record id="txn_template_export_companion_tax_ids_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">companion_tax_ids/id</field>
-    </record>
-    <record id="txn_template_export_companion_description" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">companion_description</field>
-    </record>
-    <record id="txn_template_export_fee_pct_min" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">fee_pct_min</field>
-    </record>
-    <record id="txn_template_export_fee_pct_max" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">fee_pct_max</field>
-    </record>
-    <record id="txn_template_export_franked_pct" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">franked_pct</field>
-    </record>
-    <record id="txn_template_export_company_tax_rate" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">company_tax_rate</field>
-    </record>
-    <record id="txn_template_export_div_franked_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">div_franked_account_id</field>
-    </record>
-    <record id="txn_template_export_div_unfranked_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">div_unfranked_account_id</field>
-    </record>
-    <record id="txn_template_export_franking_income_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">franking_income_account_id</field>
-    </record>
-    <record id="txn_template_export_franking_credit_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">franking_credit_account_id</field>
-    </record>
-    <record id="txn_template_export_split_ids_sequence" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">split_ids/sequence</field>
-    </record>
-    <record id="txn_template_export_split_ids_keyword" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">split_ids/keyword</field>
-    </record>
-    <record id="txn_template_export_split_ids_account_id" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">split_ids/account_id</field>
-    </record>
-    <record id="txn_template_export_split_ids_description" model="ir.exports.line">
-        <field name="export_id" ref="txn_template_export"/>
-        <field name="name">split_ids/description</field>
+        <field name="export_fields" eval="[(5, 0, 0),
+                (0, 0, {'name': 'id'}),
+                (0, 0, {'name': 'name'}),
+                (0, 0, {'name': 'active'}),
+                (0, 0, {'name': 'sequence'}),
+                (0, 0, {'name': 'kind'}),
+                (0, 0, {'name': 'journal_id'}),
+                (0, 0, {'name': 'direction'}),
+                (0, 0, {'name': 'match_text'}),
+                (0, 0, {'name': 'match_is_regex'}),
+                (0, 0, {'name': 'amount_min'}),
+                (0, 0, {'name': 'amount_max'}),
+                (0, 0, {'name': 'account_id'}),
+                (0, 0, {'name': 'partner_id'}),
+                (0, 0, {'name': 'product_id'}),
+                (0, 0, {'name': 'tax_ids/id'}),
+                (0, 0, {'name': 'description'}),
+                (0, 0, {'name': 'companion_text'}),
+                (0, 0, {'name': 'companion_is_regex'}),
+                (0, 0, {'name': 'companion_product_id'}),
+                (0, 0, {'name': 'companion_tax_ids/id'}),
+                (0, 0, {'name': 'companion_description'}),
+                (0, 0, {'name': 'fee_pct_min'}),
+                (0, 0, {'name': 'fee_pct_max'}),
+                (0, 0, {'name': 'franked_pct'}),
+                (0, 0, {'name': 'company_tax_rate'}),
+                (0, 0, {'name': 'div_franked_account_id'}),
+                (0, 0, {'name': 'div_unfranked_account_id'}),
+                (0, 0, {'name': 'franking_income_account_id'}),
+                (0, 0, {'name': 'franking_credit_account_id'}),
+                (0, 0, {'name': 'split_ids/sequence'}),
+                (0, 0, {'name': 'split_ids/keyword'}),
+                (0, 0, {'name': 'split_ids/account_id'}),
+                (0, 0, {'name': 'split_ids/description'}),
+            ]"/>
     </record>
 </odoo>

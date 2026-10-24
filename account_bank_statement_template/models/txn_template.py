@@ -153,11 +153,26 @@ class BankTxnTemplate(models.Model):
             if field is not None and field.type == 'many2one' and field.comodel_name in keys:
                 records = self.env[field.comodel_name].search([])
                 columns.append((i, {r.display_name: r[keys[field.comodel_name]] for r in records}))
-        if columns:
-            data = [list(row) for row in data]
+        data = [list(row) for row in data]
+        for row in data:
+            for i, names in columns:
+                row[i] = names.get(row[i], row[i])
+        # Re-importing an export updates the templates by id; their split lines
+        # are replaced by the file's, as split line ids from another database
+        # can't be found.
+        if 'split_ids/id' in fields:
+            i = fields.index('split_ids/id')
+            fields = fields[:i] + fields[i + 1:]
+            data = [row[:i] + row[i + 1:] for row in data]
+        if 'id' in fields and any(f.startswith('split_ids/') for f in fields):
+            i = fields.index('id')
+            existing = self.browse()
             for row in data:
-                for i, names in columns:
-                    row[i] = names.get(row[i], row[i])
+                xmlid = row[i] if '.' in (row[i] or '') else row[i] and '__import__.' + row[i]
+                record = xmlid and self.env.ref(xmlid, raise_if_not_found=False)
+                if record and record._name == self._name:
+                    existing |= record
+            existing.mapped('split_ids').unlink()
         return super(BankTxnTemplate, self).load(fields, data)
 
     @api.multi
