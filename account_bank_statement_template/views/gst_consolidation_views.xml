@@ -1,0 +1,64 @@
+<?xml version="1.0" encoding="utf-8"?>
+<odoo>
+    <record id="view_gst_consolidation_form" model="ir.ui.view">
+        <field name="name">account.gst.consolidation.form</field>
+        <field name="model">account.gst.consolidation</field>
+        <field name="arch" type="xml">
+            <form string="GST Consolidation">
+                <div class="alert alert-warning" role="alert"
+                     attrs="{'invisible': [('existing_move_ids', '=', [])]}">
+                    This quarter is already consolidated: <field name="existing_move_ids" widget="many2many_tags" readonly="1"/>
+                </div>
+                <group>
+                    <group>
+                        <field name="period_end"/>
+                        <field name="name"/>
+                        <field name="date"/>
+                        <field name="journal_id"/>
+                    </group>
+                    <group>
+                        <field name="collected_account_id"/>
+                        <field name="paid_account_id"/>
+                        <field name="net_account_id"/>
+                        <field name="currency_id" invisible="1"/>
+                    </group>
+                </group>
+                <group>
+                    <group string="GST Collected">
+                        <field name="collected_balance"/>
+                        <field name="collected_amount"/>
+                    </group>
+                    <group string="GST Paid">
+                        <field name="paid_balance"/>
+                        <field name="paid_amount"/>
+                    </group>
+                </group>
+                <group>
+                    <group>
+                        <field name="net_amount"/>
+                    </group>
+                    <div class="text-muted" style="padding-right: 16px;">
+                        Balances are posted entries up to the quarter end.<br/>
+                        Amounts to move are whole dollars, cents dropped;<br/>
+                        change them to match your BAS if needed.<br/>
+                        One entry: GST Collected and GST Paid into GST Net.
+                    </div>
+                </group>
+                <footer>
+                    <button name="action_post" string="Create and Post" type="object" class="btn-primary"/>
+                    <button string="Cancel" special="cancel"/>
+                </footer>
+            </form>
+        </field>
+    </record>
+
+    <record id="action_gst_consolidation" model="ir.actions.act_window">
+        <field name="name">GST Consolidation</field>
+        <field name="res_model">account.gst.consolidation</field>
+        <field name="view_mode">form</field>
+        <field name="target">new</field>
+    </record>
+    <menuitem id="menu_gst_consolidation" action="action_gst_consolidation"
+              parent="account.menu_finance_configuration" sequence="42"
+              groups="account.group_account_manager"/>
+</odoo>

@@ -11,3 +11,4 @@ from . import test_approve_dividend
 from . import test_last_statement
 from . import test_export
 from . import test_statement_import
+from . import test_gst_consolidation
