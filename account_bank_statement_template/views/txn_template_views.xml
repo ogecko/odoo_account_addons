@@ -5,7 +5,7 @@
         <field name="name">account.bank.txn.template.tree</field>
         <field name="model">account.bank.txn.template</field>
         <field name="arch" type="xml">
-            <tree string="Bank Statement Templates" editable="bottom">
+            <tree string="Bank Statement Templates">
                 <field name="sequence" widget="handle"/>
                 <field name="name"/>
                 <field name="kind"/>
