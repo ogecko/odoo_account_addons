@@ -34,7 +34,7 @@ REGISTER = echo "env['ir.module.module'].update_list(); env.cr.commit()" | \
 	-c /opt/odoo/etc/odoo.conf --addons-path=$(ODOO_ADDONS) \
 	--no-xmlrpc --max-cron-threads=0 --log-level=warn
 
-.PHONY: pure test upgrade check-stack deploy diff
+.PHONY: pure test upgrade check-stack deploy diff trial trial-upgrade trial-down trial-destroy
 
 # Odoo-free unit tests, run locally.
 pure:
@@ -79,3 +79,9 @@ upgrade: check-stack
 	$(ODOO_RUN) -d $(DB) -i $(MODULE) -u $(MODULE) >> tmp/odoo-upgrade.log 2>&1 \
 	  && ! grep -qE ' (ERROR|CRITICAL) |invalid module names' tmp/odoo-upgrade.log \
 	  && echo "upgraded $(MODULE) in $(DB)" || { tail -30 tmp/odoo-upgrade.log; exit 1; }
+
+# The trial instance (http://127.0.0.1:28055) runs this working tree against a
+# copy of a live quarter; it lives in the stack. See the README.
+STACK = $(HOME)/projects/ogecko_accounts
+trial trial-upgrade trial-down trial-destroy:
+	@$(MAKE) -s -C $(STACK) $@ FROM='$(FROM)' DB='$(DB)'

@@ -62,10 +62,11 @@
                         <group>
                             <field name="franked_pct"/>
                             <field name="company_tax_rate"/>
-                            <div colspan="2" class="text-muted">
-                                Bank amount = franked + unfranked. Franking credit = franked / (1 - tax rate) - franked,
-                                credited to income and debited to the tax credit. The line description is the prefix,
-                                e.g. <code>WDS 100 Div</code>.
+                            <div colspan="2" class="text-muted" style="padding-right: 16px;">
+                                Bank amount = franked + unfranked<br/>
+                                Franking credit = franked / (1 - tax rate) - franked<br/>
+                                Credit income, debit tax credit.<br/>
+                                Description prefixes each line, e.g. <code>WDS 100 Div</code>
                             </div>
                         </group>
                         <group>

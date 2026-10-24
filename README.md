@@ -23,5 +23,12 @@ working tree read-only; the live server only runs committed code.
 | `make pure` | Run the Odoo-free unit tests locally (`uv run pytest`). |
 | `make test` | Run the addon's Odoo tests on this working tree, in a throwaway database copy that is dropped afterwards. |
 | `make upgrade DB=bst_<name>` | Install or upgrade this working tree's addon in a throwaway `bst_*` database. |
+| `make trial [FROM=ogecko_2026Q3]` | Start the trial instance (http://127.0.0.1:28055) with a copy of a live quarter, running this working tree. |
+| `make trial-upgrade [DB=trial_2026Q3]` | Reload this working tree's addon into the trial after an edit. |
+| `make trial-down` / `make trial-destroy` | Stop the trial (data kept) / remove it and its data. |
+
+The trial and going live are described step by step in
+`~/projects/ogecko_accounts/README.md` ("Trying addon changes", "Making addon
+changes live").
 
 Tests and trials never run against archived databases.
