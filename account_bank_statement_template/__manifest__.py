@@ -24,6 +24,7 @@
     ],
     'data': [
         'security/ir.model.access.csv',
+        'data/txn_template_export.xml',
         'views/assets.xml',
         'views/txn_template_views.xml',
         'views/bank_statement_views.xml',

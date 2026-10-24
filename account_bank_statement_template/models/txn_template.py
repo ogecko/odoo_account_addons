@@ -122,6 +122,28 @@ class BankTxnTemplate(models.Model):
                         raise ValidationError(_("Template '%s': invalid regular expression '%s' (%s)")
                                               % (t.name, text, e))
 
+    @api.model
+    def load(self, fields, data):
+        """Import what Odoo's own export writes: accounts and journals appear
+        there by display name ('81000 Interest Income', 'Bank (AUD)'), which
+        the import can't find, so swap in the code or plain name first."""
+        keys = {'account.account': 'code', 'account.journal': 'name'}
+        columns = []
+        for i, path in enumerate(fields):
+            model, field = self, None
+            for part in path.split('/'):
+                field = model._fields.get(part) if model is not None else None
+                model = self.env[field.comodel_name] if field is not None and field.relational else None
+            if field is not None and field.type == 'many2one' and field.comodel_name in keys:
+                records = self.env[field.comodel_name].search([])
+                columns.append((i, {r.display_name: r[keys[field.comodel_name]] for r in records}))
+        if columns:
+            data = [list(row) for row in data]
+            for row in data:
+                for i, names in columns:
+                    row[i] = names.get(row[i], row[i])
+        return super(BankTxnTemplate, self).load(fields, data)
+
     @api.multi
     def _to_match_dict(self):
         self.ensure_one()

@@ -1,5 +1,5 @@
 # Private business data: never commit
-data/
+/data/
 docs/superpowers/
 tmp/
 .superpowers/
