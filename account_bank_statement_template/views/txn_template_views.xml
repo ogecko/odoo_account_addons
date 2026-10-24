@@ -118,4 +118,14 @@
               parent="account.menu_finance_configuration" sequence="40"
               groups="account.group_account_manager"/>
 
+    <record id="action_bank_statement_last" model="ir.actions.server">
+        <field name="name">Bank Statement (last)</field>
+        <field name="model_id" ref="account.model_account_bank_statement"/>
+        <field name="state">code</field>
+        <field name="code">action = model.action_open_last()</field>
+    </record>
+    <menuitem id="menu_bank_statement_last" action="action_bank_statement_last"
+              parent="account.menu_finance_configuration" sequence="41"
+              groups="account.group_account_manager"/>
+
 </odoo>

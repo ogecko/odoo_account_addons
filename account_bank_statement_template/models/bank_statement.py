@@ -78,6 +78,29 @@ class AccountBankStatement(models.Model):
             st.txn_manual_line_ids = st.line_ids.filtered(
                 lambda l: not l.journal_entry_ids and not l.txn_proposal_id)
 
+    @api.model
+    def action_open_last(self):
+        """The latest statement of the journals that have templates (any journal
+        if a template has none), open on its Proposals tab; the statement list
+        if there is none yet."""
+        templates = self.env['account.bank.txn.template'].search([])
+        domain = [('journal_id', 'in', templates.mapped('journal_id').ids)]
+        if not templates or templates.filtered(lambda t: not t.journal_id):
+            domain = []
+        statement = self.search(domain, order='date desc, id desc', limit=1)
+        if not statement:
+            return self.env.ref('account.action_bank_statement_tree').read()[0]
+        return {
+            'type': 'ir.actions.act_window',
+            'name': statement.name,
+            'res_model': self._name,
+            'res_id': statement.id,
+            'view_mode': 'form',
+            'views': [(False, 'form')],
+            'target': 'current',
+            'context': {'open_tab': 'txn_proposals'},
+        }
+
     @api.multi
     def action_match_templates(self):
         for st in self:
